@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Tempest Rebirth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='55' r='40' fill='%2370c8ff'/><circle cx='38' cy='50' r='7' fill='%23222'/><circle cx='62' cy='50' r='7' fill='%23222'/></svg>" />
+    <link rel="modulepreload" crossorigin href="/assets/three-CRG5O7-6.js" />
+    <link rel="stylesheet" crossorigin href="/assets/index-IA7ecgQN.css" />
+    <script>
+      Object.defineProperty(window, "comet", {
+        configurable: false,
+        enumerable: true,
+        value: function comet() {
+          const game = window.__game;
+
+          if (!game?.prog || !game?.notes) {
+            console.warn("《Notice》 Tempest Rebirth is still awakening. Try comet() again once the title screen appears.");
+            return false;
+          }
+
+          const acquired = game.prog.acquireSkill("meteor");
+
+          if (!acquired) {
+            console.info("《Notice》 Comet has already answered you. Ultimate Skill ‘Meteor’ is available on X.");
+            return false;
+          }
+
+          game.notes.acquired(
+            "HIDDEN COMMAND ACCEPTED",
+            "Comet",
+            "Ultimate Skill ‘Meteor’ acquired. Press X to call down a falling star.",
+            "meteor"
+          );
+          game.acquireFx?.();
+
+          console.log(
+            "%c《Notice》 Hidden command accepted.\n%cComet has granted Ultimate Skill ‘Meteor’. Press X to use it.",
+            "color:#70c8ff;font-weight:800;font-size:14px",
+            "color:#ffd27d;font-weight:700;font-size:13px"
+          );
+          return true;
+        }
+      });
+    </script>
+    <script type="module" crossorigin src="/assets/index-DypIeETG.js"></script>
+    <script type="module" crossorigin src="/assets/index-B5Qt9EMX.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="ui"></div>
+    </div>
+  </body>
+</html>
