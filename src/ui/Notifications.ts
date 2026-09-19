@@ -13,6 +13,7 @@ export class Notifications {
   private area: HTMLElement;
   private bossIntro: HTMLElement;
   private callout: HTMLElement;
+  private tech: HTMLElement;
   private cineTop: HTMLElement;
   private cineBot: HTMLElement;
   private queue: (() => number)[] = [];
@@ -29,6 +30,7 @@ export class Notifications {
     this.area = el('area'); root.appendChild(this.area);
     this.bossIntro = el('boss-intro'); root.appendChild(this.bossIntro);
     this.callout = el('callout'); root.appendChild(this.callout);
+    this.tech = el('technique'); root.appendChild(this.tech);
     this.cineTop = el('cine top'); this.cineBot = el('cine bottom');
     root.appendChild(this.cineTop); root.appendChild(this.cineBot);
   }
@@ -103,6 +105,15 @@ export class Notifications {
   boss(kicker: string, name: string, sub: string) {
     this.bossIntro.innerHTML = `<div class="boss-intro-kicker">${kicker}</div><div class="boss-intro-name">${name}</div><div class="boss-intro-sub">${sub}</div>`;
     this.restart(this.bossIntro, 'show');
+  }
+
+  /** anime technique name card: slams in from the left with a colored brush line. color is any CSS color. */
+  technique(name: string, sub: string, color = '#ffe3a3') {
+    this.tech.style.setProperty('--tc', color);
+    this.tech.innerHTML = `<div class="tech-streak"></div><div class="tech-bar"></div><div class="tech-body"><div class="tech-kicker">${sub}</div><div class="tech-name">${name.split('').map((c) => `<span>${c === ' ' ? '&nbsp;' : c}</span>`).join('')}</div></div>`;
+    this.restart(this.tech, 'show');
+    sfx('phase', 0.7);
+    this.later(0.12, () => sfx('slashHeavy', 0.6));
   }
 
   say(text: string) {

@@ -109,6 +109,17 @@ export class Renderer {
     globalUniforms.uStorm.value = s;
   }
 
+  /** Megiddo night: the world's own light drains away so only additive light constructs remain. Call after setStorm. */
+  setNight(n: number) {
+    if (n <= 0.001) return;
+    this.sun.intensity *= 1 - n * 0.9;
+    this.hemi.intensity *= 1 - n * 0.8;
+    this.sun.color.lerp(new THREE.Color(0x6f86ff), n);
+    this.fog.color.lerp(new THREE.Color(0x070a18), n);
+    this.gl.setClearColor(this.fog.color);
+    this.sky.storm = Math.max(this.sky.storm, n);
+  }
+
   /** Follow shadow camera to a focus point and snap to texel grid to prevent shimmering */
   updateShadowFocus(focus: THREE.Vector3) {
     const s = this.sun;

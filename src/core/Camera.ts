@@ -43,6 +43,10 @@ export class GameCamera {
   bossTarget: THREE.Object3D | null = null;
   ultBlend = 0;
   ultFocus: THREE.Vector3 | null = null;
+  /** per-ultimate framing: extra pull-back distance, how far the look point leans toward ultFocus, extra FOV */
+  ultFar = 5;
+  ultLookK = 0.45;
+  ultFovExtra = 8;
   private ultLookBlend = 0;
 
   constructor(cam: THREE.PerspectiveCamera) {
@@ -149,7 +153,7 @@ export class GameCamera {
       const tp = this.lockTarget.getWorldPosition(this.tmp);
       desired += clamp(tp.distanceTo(target) * 0.12, 0, 3) + Math.max(0, this.lockRadius - 0.6) * 2.2;
     }
-    desired += this.ultBlend * 5;
+    desired += this.ultBlend * this.ultFar;
     this.curDist = damp(this.curDist, desired, 4, rawDt);
 
     // position from spherical coords
@@ -176,11 +180,11 @@ export class GameCamera {
     look.y += 0.15 * this.combatBlend + this.ultBlend * 1.5;
     if (this.ultFocus && this.ultBlend > 0.05) {
       this.ultLookBlend = damp(this.ultLookBlend, 1, 3, rawDt);
-      look.lerp(this.tmp2.copy(this.smoothPivot).lerp(this.ultFocus, 0.45), this.ultLookBlend * 0.8);
+      look.lerp(this.tmp2.copy(this.smoothPivot).lerp(this.ultFocus, this.ultLookK), this.ultLookBlend * 0.8);
     } else this.ultLookBlend = damp(this.ultLookBlend, 0, 4, rawDt);
     this.cam.lookAt(look);
     // fov
-    this.fovTarget = 58 - 3 * this.combatBlend + 7 * this.sprintBlend + this.ultBlend * 8;
+    this.fovTarget = 58 - 3 * this.combatBlend + 7 * this.sprintBlend + this.ultBlend * this.ultFovExtra;
     this.fov = damp(this.fov, this.fovTarget, 5, rawDt);
     this.cam.fov = this.fov;
     this.cam.updateProjectionMatrix();

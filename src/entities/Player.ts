@@ -338,7 +338,7 @@ export class Player implements Combatant, SkillContext {
       case 'ult': {
         this.vel.x = damp(this.vel.x, 0, 10, dt); this.vel.z = damp(this.vel.z, 0, 10, dt);
         this.ultRise = damp(this.ultRise, this.skills.ultActive && this.skills.ultChargeT < 1 ? 1.6 : 0.2, 2.5, dt);
-        this.yaw += dt * 0.8;
+        if (!this.skills.ultHold) this.yaw += dt * 0.8;
         this.model.squashTo(0.95, 1.1);
         if (!this.skills.ultActive) { this.state = 'idle'; }
         break;

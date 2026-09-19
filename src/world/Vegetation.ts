@@ -47,7 +47,7 @@ void main() {
 const grassFrag = /* glsl */ `
 precision highp float;
 uniform vec3 uColorA; uniform vec3 uColorB; uniform vec3 uTip;
-uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar;
+uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar; uniform float uNight;
 varying float vH; varying float vShade; varying float vColorVar; varying float vFade;
 void main() {
   if (vFade < 0.02) discard;
@@ -57,6 +57,7 @@ void main() {
   // dither fade to avoid transparency sorting
   float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
   if (dither > vFade) discard;
+  col *= mix(vec3(1.0), vec3(0.08, 0.11, 0.24), uNight);
   float depth = gl_FragCoord.z / gl_FragCoord.w;
   float fogF = smoothstep(uFogNear, uFogFar, depth);
   col = mix(col, uFogColor, fogF);
@@ -122,6 +123,7 @@ export class Grass {
         uTime: globalUniforms.uTime,
         uPlayerPos: globalUniforms.uPlayerPos,
         uWindStrength: globalUniforms.uWindStrength,
+        uNight: globalUniforms.uNight,
         uFadeDist: { value: 120 },
         uColorA: { value: new THREE.Color(0x3d9a3c) },
         uColorB: { value: new THREE.Color(0x7fce56) },

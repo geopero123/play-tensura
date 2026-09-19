@@ -23,7 +23,7 @@ const waterFrag = /* glsl */ `
 precision highp float;
 uniform float uTime;
 uniform vec3 uDeep; uniform vec3 uShallow; uniform vec3 uFoam; uniform vec3 uSky;
-uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar;
+uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar; uniform float uNight;
 uniform float uFlow;
 varying vec2 vUv; varying vec3 vWorld; varying float vFogDepth;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
@@ -47,6 +47,7 @@ void main() {
   col = mix(col, uFoam, foam);
   float alpha = 0.82 + foam * 0.15;
   float fogF = smoothstep(uFogNear, uFogFar, vFogDepth);
+  col *= mix(vec3(1.0), vec3(0.12, 0.16, 0.32), uNight);
   col = mix(col, uFogColor, fogF);
   gl_FragColor = vec4(col, alpha);
 }`;
@@ -56,7 +57,7 @@ precision highp float;
 uniform float uTime;
 uniform vec3 uColor; uniform vec3 uFoam;
 varying vec2 vUv; varying vec3 vWorld; varying float vFogDepth;
-uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar;
+uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar; uniform float uNight;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 float noise(vec2 p){ vec2 i = floor(p); vec2 f = fract(p); vec2 u = f*f*(3.0-2.0*f);
   return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y); }
@@ -70,6 +71,7 @@ void main() {
   col = mix(col, uFoam, (1.0 - vUv.y) * 0.5);
   float alpha = (0.55 + s * 0.45) * edge;
   float fogF = smoothstep(uFogNear, uFogFar, vFogDepth);
+  col *= mix(vec3(1.0), vec3(0.12, 0.16, 0.32), uNight);
   col = mix(col, uFogColor, fogF);
   gl_FragColor = vec4(col, alpha);
 }`;
@@ -87,6 +89,7 @@ export class Water {
   constructor(terrain: Terrain, fog: THREE.Fog) {
     this.u = {
       uTime: globalUniforms.uTime,
+      uNight: globalUniforms.uNight,
       uDeep: { value: new THREE.Color(0x1f7bb8) },
       uShallow: { value: new THREE.Color(0x63d0ea) },
       uFoam: { value: new THREE.Color(0xf2ffff) },

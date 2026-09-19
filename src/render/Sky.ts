@@ -22,6 +22,7 @@ uniform vec3 uSunColor;
 uniform float uStorm;
 uniform float uFlash;
 uniform float uCloudCover;
+uniform float uSunBoost;
 
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 float noise(vec2 p){
@@ -51,6 +52,10 @@ void main() {
   float disc = smoothstep(0.9985, 0.999, sd);
   float glow = pow(sd, 24.0) * 0.55 + pow(sd, 3.0) * 0.18;
   col += uSunColor * (disc * 3.0 + glow) * (1.0 - uStorm * 0.85);
+  // Megiddo: the sun swells and the whole sky washes toward white-gold
+  float boostGlow = pow(sd, 8.0) * 1.2 + pow(sd, 2.0) * 0.06;
+  col += vec3(1.0, 0.95, 0.8) * boostGlow * uSunBoost;
+  col = mix(col, vec3(1.0, 0.97, 0.88), uSunBoost * 0.08);
 
   // clouds projected on a plane above
   if (y > 0.02) {
@@ -88,6 +93,8 @@ export class Sky {
   sunDir = new THREE.Vector3(0.35, 0.55, 0.45).normalize();
   storm = 0;
   flash = 0;
+  /** 0..1 Megiddo sun swell */
+  sunBoost = 0;
 
   constructor() {
     this.uniforms = {
@@ -98,6 +105,7 @@ export class Sky {
       uGround: { value: new THREE.Color(0x7aa9c9) },
       uSunColor: { value: new THREE.Color(0xfff2c8) },
       uStorm: { value: 0 },
+      uSunBoost: { value: 0 },
       uFlash: { value: 0 },
       uCloudCover: { value: 0.35 },
     };
@@ -119,6 +127,7 @@ export class Sky {
     this.uniforms.uTime.value = time;
     this.uniforms.uSunDir.value.copy(this.sunDir);
     this.uniforms.uStorm.value = this.storm;
+    this.uniforms.uSunBoost.value = this.sunBoost;
     this.flash = Math.max(0, this.flash - dt * 4);
     this.uniforms.uFlash.value = this.flash;
     this.mesh.position.copy(cameraPos);

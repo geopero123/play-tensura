@@ -66,8 +66,7 @@ export class HUD {
     this.hud.appendChild(left);
     // skills
     const skills = h('div', 'skills');
-    const order: SkillId[] = ['waterBlade', 'blackFlame', 'windCutter', 'lightning', 'predator', 'meteor'];
-    for (const id of order) {
+    for (const id of SKILL_ORDER) {
       const def = SKILLS[id];
       const el = h('div', 'skill' + (def.ultimate ? ' ult' : ''));
       el.innerHTML = ICONS[def.icon];

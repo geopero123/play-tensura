@@ -7,6 +7,8 @@ export const globalUniforms = {
   uWindStrength: { value: 1 },
   uPlayerPos: { value: new THREE.Vector3() },
   uStorm: { value: 0 },
+  /** 0..1 Megiddo night: every stylized surface drains toward a deep blue-black */
+  uNight: { value: 0 },
 };
 
 let gradientTex: THREE.DataTexture | null = null;
@@ -132,7 +134,7 @@ export function createToonMaterial(opts: ToonOptions = {}): ToonMat {
         '#include <common>',
         `#include <common>
         uniform vec3 uRimColor; uniform float uRimStrength; uniform float uRimPower; uniform float uSpecular;
-        uniform float uFlash; uniform vec3 uSunDirView; uniform vec3 uShadowTint; uniform float uDissolve; uniform vec3 uTint;
+        uniform float uFlash; uniform vec3 uSunDirView; uniform vec3 uShadowTint; uniform float uDissolve; uniform vec3 uTint; uniform float uNight;
         uniform float uTime;
         varying vec3 vWorldPosT; varying vec3 vObjPos;
         float hashf(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453); }`
@@ -163,6 +165,7 @@ export function createToonMaterial(opts: ToonOptions = {}): ToonMat {
           float spec = smoothstep(0.86, 0.9, pow(ndh, 8.0)) * uSpecular;
           outgoingLight += vec3(spec) * (0.6 + 0.4 * diffuseColor.rgb);
           outgoingLight *= uTint;
+          outgoingLight *= mix(vec3(1.0), vec3(0.10, 0.13, 0.26), uNight);
           outgoingLight = mix(outgoingLight, vec3(1.0, 0.98, 0.95), uFlash);
           if (uDissolve > 0.0) {
             float n = hashf(floor(vObjPos * 18.0));

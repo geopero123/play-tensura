@@ -61,7 +61,8 @@ export class Menus {
         <div><span>Dodge (hold: sprint)</span><b>SHIFT</b></div><div><span>Jump</span><b>SPACE</b></div>
         <div><span>Water Blade</span><b>Q</b></div><div><span>Black Flame</span><b>E</b></div>
         <div><span>Wind Cutter</span><b>R</b></div><div><span>Lightning Judgment</span><b>C</b></div>
-        <div><span>Predator (devour)</span><b>F</b></div><div><span>Ultimate</span><b>X</b></div>
+        <div><span>Predator (devour)</span><b>F</b></div><div><span>Meteor (ultimate)</span><b>X</b></div>
+        <div><span>Megiddo Ray (ultimate)</span><b>V</b></div><div><span>Minimap zoom</span><b>M</b></div>
         <div><span>Lock target</span><b>TAB / MIDDLE MOUSE</b></div><div><span>Interact</span><b>F</b></div>
         <div><span>Skills screen</span><b>K</b></div><div><span>Pause</span><b>ESC</b></div>
       </div></div>`;

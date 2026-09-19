@@ -65,6 +65,7 @@ button { font-family: inherit; }
 /* skills bar */
 .skills { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); display: flex; gap: 12px; align-items: flex-end; }
 .skill { position: relative; width: 62px; height: 62px; border-radius: 12px; background: radial-gradient(circle at 50% 40%, rgba(40,60,120,.8), rgba(8,12,30,.9)); border: 1.5px solid rgba(240,201,106,.45); box-shadow: 0 6px 16px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.6) inset; transition: transform .15s ease, box-shadow .2s ease; }
+.skill.ult .skill-name { max-width: 90px; }
 .skill.ult { width: 78px; height: 78px; border-radius: 50%; border-color: var(--gold); box-shadow: 0 0 22px rgba(240,201,106,.35), 0 6px 16px rgba(0,0,0,.5); }
 .skill.ult.ready { animation: ultPulse 1.6s ease-in-out infinite; }
 .skill svg { position: absolute; inset: 9px; width: calc(100% - 18px); height: calc(100% - 18px); filter: drop-shadow(0 0 6px rgba(127,223,255,.5)); }
@@ -72,7 +73,7 @@ button { font-family: inherit; }
 .skill-key { position: absolute; left: 50%; top: -10px; transform: translateX(-50%); background: linear-gradient(180deg, #fff3cf, #d4a84a); color: #2a1a05; font: 800 11px var(--font-head); padding: 2px 7px; border-radius: 5px; border: 1px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,.6); }
 .skill-cd { position: absolute; inset: 0; border-radius: inherit; background: conic-gradient(rgba(5,8,20,.85) var(--p, 0%), transparent 0); pointer-events: none; }
 .skill-cd-text { position: absolute; inset: 0; display: grid; place-items: center; font: 800 18px var(--font-head); color: #fff; text-shadow: 0 0 8px #000; }
-.skill-name { position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); white-space: nowrap; font: 700 9.5px var(--font-body); letter-spacing: 1px; color: #cfe6ff; text-transform: uppercase; opacity: .85; text-shadow: 0 1px 2px #000; }
+.skill-name { position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); white-space: nowrap; max-width: 72px; overflow: hidden; text-overflow: ellipsis; font: 700 9.5px var(--font-body); letter-spacing: 1px; color: #cfe6ff; text-transform: uppercase; opacity: .85; text-shadow: 0 1px 2px #000; }
 .skill.locked { filter: grayscale(1) brightness(.5); }
 .skill.locked .skill-name { opacity: .5; }
 .skill.pressed { transform: scale(.92); }
@@ -140,7 +141,7 @@ button { font-family: inherit; }
 .dmg.heal { color: #9fffc0; text-shadow: 0 0 8px rgba(0,0,0,.9), 0 0 12px rgba(80,255,150,.7); }
 .dmg.player { color: #ff7a7a; text-shadow: 0 0 8px rgba(0,0,0,.9), 0 0 12px rgba(255,60,60,.6); }
 .dmg.spell { color: #c8a8ff; }
-.dmg.water { color: #9fe6ff; } .dmg.fire { color: #c880ff; } .dmg.wind { color: #b0ffd8; } .dmg.lightning { color: #fff2a0; } .dmg.meteor { color: #ffb070; font-size: 40px; }
+.dmg.water { color: #9fe6ff; } .dmg.fire { color: #c880ff; } .dmg.wind { color: #b0ffd8; } .dmg.lightning { color: #fff2a0; } .dmg.meteor { color: #ffb070; font-size: 40px; } .dmg.light { color: #fff6d0; font-size: 30px; text-shadow: 0 0 8px rgba(0,0,0,.9), 0 0 16px rgba(255,236,170,.9); }
 .dmg.text { font-size: 16px; letter-spacing: 3px; color: var(--cyan); }
 
 /* lock-on marker */
@@ -338,3 +339,34 @@ button { font-family: inherit; }
 @media (max-width: 900px) {
   .bar { width: 220px; } .logo-title { font-size: 56px; } .quest { width: 220px; } .combo { right: 20px; }
 }
+
+/* ---------- minimap ---------- */
+.minimap { position: absolute; right: 28px; bottom: 28px; width: 176px; height: 176px; opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+.hud.visible .minimap.visible { opacity: 1; transform: none; }
+.minimap-canvas { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 8px 30px rgba(0,0,0,.6), inset 0 0 30px rgba(0,0,0,.6); }
+.minimap-ring { position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--line); box-shadow: 0 0 14px rgba(240,201,106,.25), inset 0 0 0 1px rgba(255,255,255,.08); pointer-events: none; }
+.minimap-ring::before { content: ''; position: absolute; inset: 6px; border-radius: 50%; border: 1px dashed rgba(240,201,106,.28); }
+.minimap-n { position: absolute; left: var(--nx, 88px); top: var(--ny, 12px); transform: translate(-50%, -50%); font: 900 11px var(--font-head); color: var(--gold-2); text-shadow: 0 0 6px #000, 0 1px 2px #000; pointer-events: none; }
+.minimap-zone { position: absolute; left: 50%; top: -26px; transform: translateX(-50%); white-space: nowrap; font: 700 11px var(--font-head); letter-spacing: 3px; color: var(--gold-2); text-shadow: 0 1px 2px #000, 0 0 10px rgba(0,0,0,.8); text-transform: uppercase; }
+
+/* ---------- technique name card (anime style) ---------- */
+.technique { --tc: #ffe3a3; position: absolute; left: 0; top: 24%; width: 100%; pointer-events: none; opacity: 0; z-index: 4; }
+.technique.show { animation: techIn 2.4s cubic-bezier(.2,.9,.2,1) forwards; }
+.tech-streak { position: absolute; left: -10%; right: -10%; top: 50%; height: 3px; background: linear-gradient(90deg, transparent, var(--tc) 30%, #fff 50%, var(--tc) 70%, transparent); box-shadow: 0 0 18px var(--tc); transform: scaleX(0); transform-origin: left; animation: techStreak 2.4s cubic-bezier(.1,.9,.2,1) forwards; opacity: .9; }
+.tech-bar { position: absolute; left: 7%; top: -14px; bottom: -14px; width: 8px; background: var(--tc); box-shadow: 0 0 22px var(--tc); transform: skewX(-14deg); animation: techBar 2.4s ease forwards; }
+.tech-body { position: relative; margin-left: 9.5%; padding: 10px 40px 10px 22px; display: inline-block; background: linear-gradient(90deg, rgba(5,8,20,.85), rgba(5,8,20,.55) 70%, transparent); transform: skewX(-8deg); }
+.tech-body > * { transform: skewX(8deg); }
+.tech-kicker { font: 700 13px var(--font-head); letter-spacing: 8px; color: var(--tc); text-shadow: 0 0 12px var(--tc), 0 1px 2px #000; text-transform: uppercase; }
+.tech-name { font: 900 72px var(--font-deco); letter-spacing: 10px; line-height: 1; color: #fff; text-shadow: 0 0 24px var(--tc), 0 0 60px var(--tc), 0 4px 0 #1e2a5a, 0 8px 24px rgba(0,0,0,.8); margin-top: 6px; white-space: nowrap; }
+.tech-name span { display: inline-block; opacity: 0; transform: translateY(30px) scale(1.6); animation: techLetter .55s cubic-bezier(.2,1.4,.3,1) forwards; }
+.tech-name span:nth-child(1) { animation-delay: .12s } .tech-name span:nth-child(2) { animation-delay: .16s } .tech-name span:nth-child(3) { animation-delay: .20s } .tech-name span:nth-child(4) { animation-delay: .24s } .tech-name span:nth-child(5) { animation-delay: .28s } .tech-name span:nth-child(6) { animation-delay: .32s } .tech-name span:nth-child(7) { animation-delay: .36s } .tech-name span:nth-child(8) { animation-delay: .40s } .tech-name span:nth-child(9) { animation-delay: .44s } .tech-name span:nth-child(10) { animation-delay: .48s } .tech-name span:nth-child(11) { animation-delay: .52s } .tech-name span:nth-child(12) { animation-delay: .56s } .tech-name span:nth-child(n+13) { animation-delay: .6s }
+@keyframes techIn { 0% { opacity: 0; transform: translateX(-40px); } 6% { opacity: 1; transform: translateX(0); } 80% { opacity: 1; transform: translateX(0); } 100% { opacity: 0; transform: translateX(30px); } }
+@keyframes techStreak { 0% { transform: scaleX(0); } 12% { transform: scaleX(1); } 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes techBar { 0% { transform: skewX(-14deg) scaleY(0); } 10% { transform: skewX(-14deg) scaleY(1.15); } 18% { transform: skewX(-14deg) scaleY(1); } 100% { transform: skewX(-14deg) scaleY(1); } }
+@keyframes techLetter { 0% { opacity: 0; transform: translateY(30px) scale(1.6); filter: blur(6px); } 60% { opacity: 1; transform: translateY(-4px) scale(1.02); filter: blur(0); } 100% { opacity: 1; transform: none; } }
+@media (max-width: 900px) { .tech-name { font-size: 44px; letter-spacing: 6px; } }
+
+/* ---------- awakening (max) ---------- */
+.awaken-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 55%, rgba(255,255,255,1), rgba(195,155,255,.6) 40%, transparent 70%); z-index: 3; }
+.awaken-flash.show { animation: awakenFlash 1.4s ease-out forwards; }
+@keyframes awakenFlash { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 0; } }

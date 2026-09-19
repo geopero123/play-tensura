@@ -7,7 +7,7 @@ import { rand } from '../core/Math';
 
 export type Team = 'player' | 'enemy';
 export type HitType = 'light' | 'heavy' | 'spell' | 'ult';
-export type Element = 'physical' | 'water' | 'fire' | 'wind' | 'lightning' | 'dark' | 'meteor';
+export type Element = 'physical' | 'water' | 'fire' | 'wind' | 'lightning' | 'dark' | 'meteor' | 'light';
 
 export interface HitInfo {
   damage: number;
@@ -169,7 +169,7 @@ export class Combat {
   private afterHit(hit: HitInfo, target: Combatant, targetTeam: Team) {
     if (hit.hitstop > 0) this.time.hitstop(hit.hitstop);
     // impact visuals by type/element
-    const color = hit.element === 'water' ? 0x9fe6ff : hit.element === 'fire' ? 0xc060ff : hit.element === 'wind' ? 0xb0ffd8 : hit.element === 'lightning' ? 0xfff2a0 : hit.element === 'dark' ? 0xa060ff : hit.element === 'meteor' ? 0xffb070 : 0xfff0a0;
+    const color = hit.element === 'water' ? 0x9fe6ff : hit.element === 'fire' ? 0xc060ff : hit.element === 'wind' ? 0xb0ffd8 : hit.element === 'lightning' ? 0xfff2a0 : hit.element === 'dark' ? 0xa060ff : hit.element === 'meteor' ? 0xffb070 : hit.element === 'light' ? 0xfff6d0 : 0xfff0a0;
     const strong = hit.type === 'heavy' || hit.type === 'ult' || hit.crit;
     if (targetTeam === 'enemy') {
       this.fx.hitSpark(hit.point, hit.dir, color, strong, this.camera);

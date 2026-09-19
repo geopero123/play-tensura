@@ -92,7 +92,7 @@ export class Progression {
     if (!s) return false;
     const def = SKILLS[id];
     if (s.level >= def.tiers.length) return false;
-    s.xp += amount;
+    s.xp += amount * (this.traits.has('sage') ? 2 : 1);
     const need = def.tiers[s.level].xp;
     if (s.xp >= need) {
       s.level++;
@@ -124,8 +124,32 @@ export class Progression {
     this.absorbed.set(kind, (this.absorbed.get(kind) ?? 0) + 1);
   }
 
-  cooldownScale(id: SkillId) { return this.traits.has('thermalNull') && id === 'blackFlame' ? 0.75 : 1; }
-  mpCost(id: SkillId) { const base = SKILLS[id].mp; return this.traits.has('thermalNull') && id === 'blackFlame' ? Math.round(base * 0.6) : base; }
+  cooldownScale(id: SkillId) {
+    if (this.traits.has('thermalNull') && id === 'blackFlame') return 0.75;
+    if (this.traits.has('solarCore') && id === 'megiddo') return 0.8;
+    return 1;
+  }
+  mpCost(id: SkillId) {
+    const base = SKILLS[id].mp;
+    if (this.traits.has('thermalNull') && id === 'blackFlame') return Math.round(base * 0.6);
+    if (this.traits.has('solarCore') && id === 'megiddo') return Math.round(base * 0.7);
+    return base;
+  }
+  /** debug/cheat: unlock every skill and set it to its final tier without firing evolution events. Returns counts. */
+  maxAllSkills() {
+    let unlocked = 0, evolved = 0;
+    for (const id of SKILL_ORDER) {
+      if (this.acquireSkill(id, true)) unlocked++;
+      const s = this.skills.get(id)!;
+      const top = SKILLS[id].tiers.length;
+      if (s.level < top) { evolved += top - s.level; s.level = top; s.xp = 0; }
+      s.cooldown = 0;
+    }
+    return { unlocked, evolved };
+  }
+
+  /** Predator: Gluttonous King — refresh every other skill */
+  resetCooldowns(except: SkillId) { for (const s of this.skills.values()) if (s.id !== except) s.cooldown = 0; }
 
   tick(dt: number, inCombat: boolean) {
     const regen = this.regen * (inCombat ? (this.traits.has('regen2') ? 1 : 0.25) : 1);

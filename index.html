@@ -9,40 +9,72 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='55' r='40' fill='%2370c8ff'/><circle cx='38' cy='50' r='7' fill='%23222'/><circle cx='62' cy='50' r='7' fill='%23222'/></svg>" />
     <script>
-      Object.defineProperty(window, "comet", {
-        configurable: false,
-        enumerable: true,
-        value: function comet() {
+      (function () {
+        const STYLE_HEAD = "color:#70c8ff;font-weight:800;font-size:14px";
+        const STYLE_SUB = "color:#ffd27d;font-weight:700;font-size:13px";
+
+        function ready(name) {
           const game = window.__game;
-
           if (!game?.prog || !game?.notes) {
-            console.warn("《Notice》 Tempest Rebirth is still awakening. Try comet() again once the title screen appears.");
-            return false;
+            console.warn("《Notice》 Tempest Rebirth is still awakening. Try " + name + "() again once the title screen appears.");
+            return null;
           }
+          return game;
+        }
 
-          const acquired = game.prog.acquireSkill("meteor");
-
-          if (!acquired) {
-            console.info("《Notice》 Comet has already answered you. Ultimate Skill ‘Meteor’ is available on X.");
-            return false;
-          }
-
-          game.notes.acquired(
-            "HIDDEN COMMAND ACCEPTED",
-            "Comet",
-            "Ultimate Skill ‘Meteor’ acquired. Press X to call down a falling star.",
-            "meteor"
-          );
+        function grant(game, id, kicker, name, sub, icon, already) {
+          if (!game.prog.acquireSkill(id)) { console.info("《Notice》 " + already); return false; }
+          game.notes.acquired(kicker, name, sub, icon);
           game.acquireFx?.();
-
-          console.log(
-            "%c《Notice》 Hidden command accepted.\n%cComet has granted Ultimate Skill ‘Meteor’. Press X to use it.",
-            "color:#70c8ff;font-weight:800;font-size:14px",
-            "color:#ffd27d;font-weight:700;font-size:13px"
-          );
           return true;
         }
-      });
+
+        function define(name, fn) {
+          Object.defineProperty(window, name, { configurable: false, enumerable: true, value: fn });
+        }
+
+        // comet(): grants the Meteor ultimate (X)
+        define("comet", function comet() {
+          const game = ready("comet");
+          if (!game) return false;
+          if (!grant(game, "meteor", "HIDDEN COMMAND ACCEPTED", "Comet", "Ultimate Skill ‘Meteor’ acquired. Press X to call down a falling star.", "meteor",
+            "Comet has already answered you. Ultimate Skill ‘Meteor’ is available on X.")) return false;
+          game.cheatFlourish?.("COMET", "HIDDEN COMMAND · METEOR", "#ff9a3c", 0xff9a3c);
+          console.log("%c《Notice》 Hidden command accepted.\n%cComet has granted Ultimate Skill ‘Meteor’. Press X to use it.", STYLE_HEAD, STYLE_SUB);
+          return true;
+        });
+
+        // ray(): grants the Megiddo Ray ultimate (V)
+        define("ray", function ray() {
+          const game = ready("ray");
+          if (!game) return false;
+          if (!grant(game, "megiddo", "HIDDEN COMMAND ACCEPTED", "Ray", "Ultimate Skill ‘Megiddo Ray’ acquired. Press V to gather the sun into a lens of water.", "megiddo",
+            "The sun already answers you. Ultimate Skill ‘Megiddo Ray’ is available on V.")) return false;
+          game.cheatFlourish?.("RAY", "HIDDEN COMMAND · MEGIDDO", "#fff0b0", 0xfff0b0);
+          console.log("%c《Notice》 Hidden command accepted.\n%cRay has granted Ultimate Skill ‘Megiddo Ray’. Press V to use it.", "color:#fff0b0;font-weight:800;font-size:14px", STYLE_SUB);
+          return true;
+        });
+
+        // max(): unlocks every skill and evolves each one to its final tier
+        define("max", function max() {
+          const game = ready("max");
+          if (!game) return false;
+          const prog = game.prog;
+          const order = prog.orderedSkills();
+          // staged as an awakening cinematic while playing; a plain unlock on the title screen
+          const { unlocked, evolved } = game.awakenAll ? game.awakenAll() : prog.maxAllSkills();
+          if (game.state !== "cinematic") {
+            game.notes.acquired("HIDDEN COMMAND ACCEPTED", "Max", unlocked || evolved ? "Every skill unlocked and evolved to its final form." : "Everything was already at its peak.", "evolve");
+            game.acquireFx?.();
+          }
+          console.log(
+            "%c《Notice》 Hidden command accepted.\n%cMax unlocked " + unlocked + " skill(s) and performed " + evolved + " evolution(s). All " + order.length + " skills are now at their final tier.",
+            "color:#c39bff;font-weight:800;font-size:14px",
+            STYLE_SUB
+          );
+          return true;
+        });
+      })();
     </script>
   </head>
   <body>

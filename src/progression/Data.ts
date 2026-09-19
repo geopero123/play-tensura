@@ -1,7 +1,7 @@
 /** Static game data: skills, traits, evolutions, enemy stats, XP curve. */
 
-export type SkillId = 'waterBlade' | 'blackFlame' | 'windCutter' | 'lightning' | 'predator' | 'meteor';
-export type TraitId = 'regen' | 'regen2' | 'strength' | 'strength2' | 'fireRes' | 'heatRes' | 'thermalNull' | 'keenSenses' | 'stormSense' | 'ironBody' | 'magicSense' | 'stormFang' | 'advancedPerception' | 'moonBlessing';
+export type SkillId = 'waterBlade' | 'blackFlame' | 'windCutter' | 'lightning' | 'predator' | 'meteor' | 'megiddo';
+export type TraitId = 'regen' | 'regen2' | 'strength' | 'strength2' | 'fireRes' | 'heatRes' | 'thermalNull' | 'keenSenses' | 'stormSense' | 'ironBody' | 'magicSense' | 'stormFang' | 'advancedPerception' | 'moonBlessing' | 'solarCore' | 'sage';
 
 export interface SkillDef {
   id: SkillId;
@@ -12,8 +12,8 @@ export interface SkillDef {
   desc: string;
   mp: number;
   cooldown: number;
-  element: 'water' | 'fire' | 'wind' | 'lightning' | 'dark' | 'meteor';
-  /** names per evolution level 1..3 */
+  element: 'water' | 'fire' | 'wind' | 'lightning' | 'dark' | 'meteor' | 'light';
+  /** names per evolution level 1..5 */
   tiers: { name: string; desc: string; xp: number }[];
   ultimate?: boolean;
 }
@@ -26,6 +26,8 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       { name: 'Water Blade', desc: 'A single crescent of high-pressure water.', xp: 0 },
       { name: 'Twin Water Blade', desc: 'Two blades in a scissor arc. Wider, faster.', xp: 8 },
       { name: 'Aqua Guillotine', desc: 'Three enormous blades that slice everything in their path.', xp: 22 },
+      { name: 'Tidal Fang', desc: 'Four blades; each hit erupts a geyser that launches the target.', xp: 45 },
+      { name: 'Abyssal Tide', desc: 'Five colossal blades that ricochet to nearby enemies and drown the ground in surging water.', xp: 80 },
     ],
   },
   blackFlame: {
@@ -35,6 +37,8 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       { name: 'Black Flame', desc: 'A burst of dark fire that ignites the ground.', xp: 0 },
       { name: 'Black Flame Prison', desc: 'Larger burst; flames chase nearby enemies.', xp: 6 },
       { name: 'Hell Flare', desc: 'A towering pillar of black fire that detonates.', xp: 16 },
+      { name: 'Hell Flare: Cinders', desc: 'Three orbiting flame satellites detonate around the pillar.', xp: 34 },
+      { name: 'Black Sun Eclipse', desc: 'A collapsing sphere of void-fire that detonates twice and leaves a burning eclipse.', xp: 60 },
     ],
   },
   windCutter: {
@@ -44,6 +48,8 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       { name: 'Wind Cutter', desc: 'Three homing air blades.', xp: 0 },
       { name: 'Gale Shredder', desc: 'Six blades that shred and stagger.', xp: 8 },
       { name: 'Tempest Cutter', desc: 'A storm of twelve blades that launches enemies.', xp: 20 },
+      { name: 'Vacuum Edge', desc: 'Sixteen piercing blades that pass through enemies and return.', xp: 40 },
+      { name: 'Sky Rending Cyclone', desc: 'Twenty blades and a vacuum cyclone that drags enemies together.', xp: 70 },
     ],
   },
   lightning: {
@@ -53,6 +59,8 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       { name: 'Lightning Judgment', desc: 'A single massive strike.', xp: 0 },
       { name: 'Twin Judgment', desc: 'Two strikes and a larger shockwave.', xp: 5 },
       { name: 'Divine Thunder', desc: 'A ring of strikes ending in a cataclysmic bolt.', xp: 14 },
+      { name: 'Chain Judgment', desc: 'Judgment arcs from enemy to enemy, up to four times.', xp: 30 },
+      { name: 'Heaven\'s Verdict', desc: 'A ring of eight strikes, a chain, and a pillar of white judgment that stuns everything.', xp: 55 },
     ],
   },
   predator: {
@@ -62,6 +70,8 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       { name: 'Predator', desc: 'Devour enemies below 35% health.', xp: 0 },
       { name: 'Predator: Gluttony', desc: 'Devour below 50% health; wider vortex.', xp: 6 },
       { name: 'Predator: Beelzebub', desc: 'Devour below 65%; devouring restores health and magic.', xp: 15 },
+      { name: 'Predator: Abyss', desc: 'Devour below 80%. The vortex crushes enemies for heavy damage.', xp: 30 },
+      { name: 'Predator: Gluttonous King', desc: 'Devour below 95%. Every devour resets your other cooldowns.', xp: 50 },
     ],
   },
   meteor: {
@@ -71,11 +81,24 @@ export const SKILLS: Record<SkillId, SkillDef> = {
       { name: 'Meteor', desc: 'A single falling star.', xp: 0 },
       { name: 'Meteor Rain', desc: 'Three smaller meteors precede the main impact.', xp: 3 },
       { name: 'Calamity Fall', desc: 'A world-shaking impact with a lingering firestorm.', xp: 8 },
+      { name: 'Starfall', desc: 'Six meteors rain down, then the calamity.', xp: 16 },
+      { name: 'Apocalypse Star', desc: 'Nine meteors, a shattering impact, and an aftershock that erupts from the crater.', xp: 28 },
+    ],
+  },
+  megiddo: {
+    id: 'megiddo', name: 'Megiddo Ray', key: 'V', keyCode: 'KeyV', icon: 'megiddo', element: 'light', mp: 50, cooldown: 22, ultimate: true,
+    desc: 'ULTIMATE. Form a lens of water high in the sky, gather the sun into it, and fire compressed light that never misses.',
+    tiers: [
+      { name: 'Megiddo Ray', desc: 'One lens. One beam of focused sunlight.', xp: 0 },
+      { name: 'Megiddo: Twin Lens', desc: 'Two lenses fire at the two nearest enemies.', xp: 4 },
+      { name: 'Megiddo: Constellation', desc: 'Four beams snap between enemies in sequence.', xp: 10 },
+      { name: 'Megiddo: Sunburst', desc: 'Seven beams, each impact bursts into radiant fragments.', xp: 20 },
+      { name: 'Megiddo: Solar Judgment', desc: 'Ten beams, then the lens itself fires a sweeping pillar of daylight.', xp: 34 },
     ],
   },
 };
 
-export const SKILL_ORDER: SkillId[] = ['waterBlade', 'blackFlame', 'windCutter', 'lightning', 'predator', 'meteor'];
+export const SKILL_ORDER: SkillId[] = ['waterBlade', 'blackFlame', 'windCutter', 'lightning', 'predator', 'meteor', 'megiddo'];
 
 export interface TraitDef {
   id: TraitId;
@@ -102,6 +125,8 @@ export const TRAITS: Record<TraitId, TraitDef> = {
   stormFang: { id: 'stormFang', name: 'Storm Fang', icon: 'storm', desc: 'Your attacks carry lightning. Every hit crackles.', mods: { atk: 0.15, crit: 0.1 } },
   advancedPerception: { id: 'advancedPerception', name: 'Advanced Perception', icon: 'sense', desc: 'Magic Sense + Keen Senses + Storm Sense fused. Time slows on perfect dodges for longer.', mods: { crit: 0.2, mpRegen: 4, maxMp: 40, speed: 0.08 } },
   moonBlessing: { id: 'moonBlessing', name: "Moonwell's Blessing", icon: 'evolve', desc: 'Maximum magic greatly increased.', mods: { maxMp: 50, mpRegen: 1.5 } },
+  solarCore: { id: 'solarCore', name: 'Solar Core', icon: 'sun', desc: 'A fragment of captured daylight burns in your core. Magic regenerates far faster; Megiddo costs less.', mods: { mpRegen: 3, maxMp: 30, atk: 0.1 } },
+  sage: { id: 'sage', name: 'Great Sage', icon: 'sense', desc: 'A calm voice answers your questions. Skills evolve from use twice as fast.', mods: { crit: 0.05, mpRegen: 1 } },
 };
 
 /** trait combinations that fuse into a new trait */
@@ -139,6 +164,8 @@ export const ENEMIES: Record<EnemyKind, EnemyDef> = {
 export const xpForLevel = (lv: number) => Math.round(60 * Math.pow(lv, 1.55));
 
 export interface QuestStep { id: string; text: string; count?: number }
+export interface QuestDef { id: string; title: string; steps: QuestStep[] }
+
 export const STORM_QUEST: QuestStep[] = [
   { id: 'talk', text: 'Speak with Mira in Hollow Pine Village' },
   { id: 'investigate', text: 'Investigate the wolf territory to the north-east' },
@@ -146,4 +173,14 @@ export const STORM_QUEST: QuestStep[] = [
   { id: 'source', text: 'Find the source of the storm' },
   { id: 'boss', text: 'Defeat the Ancient Tempest Wolf' },
   { id: 'return', text: 'Return to Mira in Hollow Pine Village' },
+];
+
+/** Second questline, unlocked after the storm breaks. Leads to Megiddo Ray. */
+export const SUN_QUEST: QuestStep[] = [
+  { id: 'elder', text: 'Speak with Elder Torren about the second inscription' },
+  { id: 'relic', text: 'Read the hidden inscription on the relic in the Ancient Ruins' },
+  { id: 'wisps', text: 'Devour Hellfire Wisps to understand captured light', count: 3 },
+  { id: 'lens', text: 'Offer the light to the Moonwell above Sky Falls' },
+  { id: 'trial', text: 'Survive the Sun Trial in the Storm Crater' },
+  { id: 'return', text: 'Return to Elder Torren' },
 ];
