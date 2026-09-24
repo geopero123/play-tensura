@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Settings, DEBUG } from './Settings';
+import { Settings, DEBUG, IS_TOUCH } from './Settings';
 import { Time } from './Time';
 import { Input } from './Input';
 import { GameCamera } from './Camera';
@@ -26,6 +26,7 @@ import { Minimap, MinimapBlip } from '../ui/Minimap';
 import { Menus } from '../ui/Menus';
 import { Notifications } from '../ui/Notifications';
 import { Dialogue, DialogueLine } from '../ui/Dialogue';
+import { TouchControls } from '../ui/TouchControls';
 import { audio, sfx } from '../audio/Audio';
 
 type GameState = 'loading' | 'title' | 'playing' | 'paused' | 'dead' | 'cinematic';
@@ -50,6 +51,7 @@ export class Game {
   settings = new Settings();
   time = new Time();
   input: Input;
+  touch: TouchControls | null = null;
   renderer: Renderer;
   gcam: GameCamera;
   terrain!: Terrain;
@@ -141,6 +143,7 @@ export class Game {
     this.menus.onRetry = () => this.respawn();
     this.menus.getProgression = () => this.prog ?? null;
     this.settings.onChange((s, key) => this.applySettings(key));
+    if (IS_TOUCH) this.touch = new TouchControls(this.input, uiRoot, canvas);
     canvas.addEventListener('click', () => {
       if (!audio.ready) audio.init();
       audio.resume();
@@ -867,6 +870,7 @@ export class Game {
 
   // ------------------------------------------------------------ flow
   startGame() {
+    this.touch?.enterFullscreen();
     if (!audio.ready) audio.init();
     audio.resume();
     this.menus.fadeTo(true);
@@ -901,6 +905,7 @@ export class Game {
     if (this.state !== 'playing') return;
     this.state = 'paused';
     this.input.releaseLock();
+    this.touch?.sync(false);
     this.menus.openPause();
     audio.duckMusic(0.35, 0.3);
   }
@@ -912,6 +917,7 @@ export class Game {
   }
   toTitle() {
     this.state = 'title';
+    this.touch?.sync(false);
     this.gcam.mode = 'title';
     this.hud.setVisible(false);
     this.input.releaseLock();
@@ -945,6 +951,7 @@ export class Game {
   private showTip(id: string, text: string, key?: string) {
     if (this.tipsShown.has(id)) return;
     this.tipsShown.add(id);
+    if (this.touch) ({ text, key } = touchTip(text, key));
     this.tip = { text, key };
     this.tipT = 6;
   }
@@ -1233,6 +1240,7 @@ export class Game {
     const obj = this.objectivePos();
     const fwd = this.gcam.getForward(this.tmp);
     this.minimap.setVisible(this.state === 'playing' || this.state === 'cinematic' || this.state === 'dead');
+    this.touch?.sync(this.state === 'playing' && this.menus.screen === 'none' && !this.dialogue.active);
     this.minimap.update({ x: p.x, z: p.z, playerYaw: this.player.yaw, camFx: fwd.x, camFz: fwd.z, blips, objective: obj ? { x: obj.x, z: obj.z } : null, zone: this.zoneCurrent || 'GREAT JURA FOREST' }, dt);
   }
 
@@ -1242,4 +1250,20 @@ export class Game {
     this.input.endFrame();
     void dt;
   }
+}
+
+/** rewrite keyboard/mouse tips for the on-screen controls */
+function touchTip(text: string, key?: string): { text: string; key?: string } {
+  const t = text
+    .replace('Move with W A S D. Move the mouse to look around.', 'Drag your left thumb to move. Drag on the right side to look around.')
+    .replace('Left click to attack. Chain 3 hits, then right click to launch.', 'Tap ATK to attack. Chain 3 hits, then tap HEAVY to launch.')
+    .replace('Press TAB to lock onto a target. SHIFT to dodge.', 'Tap LOCK to target an enemy. Tap DODGE to dodge (hold it to sprint).')
+    .replace('with SHIFT', 'with DODGE')
+    .replace('Press F near it to DEVOUR it', 'Tap the Predator skill (F) near it to DEVOUR it')
+    .replace(/Press ([QERCXV]) to/g, 'Tap the $1 skill to')
+    .replace('Analyze it with F.', 'Walk up and tap the prompt to analyze it.')
+    .replace(/Press F near (her|him)\./, 'Walk up and tap the prompt.')
+    .replace(/and press F\./, 'and tap the prompt.');
+  const k = key === 'WASD' ? undefined : key === 'LMB' ? 'ATK' : key === 'TAB' ? 'LOCK' : key === 'SHIFT' ? 'DODGE' : key;
+  return { text: t, key: k };
 }

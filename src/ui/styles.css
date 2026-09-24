@@ -370,3 +370,111 @@ button { font-family: inherit; }
 .awaken-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 55%, rgba(255,255,255,1), rgba(195,155,255,.6) 40%, transparent 70%); z-index: 3; }
 .awaken-flash.show { animation: awakenFlash 1.4s ease-out forwards; }
 @keyframes awakenFlash { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 0; } }
+
+/* =====================================================================
+   TOUCH / PHONE  (html.touch-mode is set by TouchControls)
+   ===================================================================== */
+.touch-ui, .rotate-hint, .touch-hint { display: none; }
+html.touch-mode, html.touch-mode body { touch-action: none; overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+html.touch-mode {
+  --sl: env(safe-area-inset-left, 0px); --sr: env(safe-area-inset-right, 0px);
+  --sb: env(safe-area-inset-bottom, 0px); --st: env(safe-area-inset-top, 0px);
+  --tui: .75;
+}
+
+/* ---- control layer ---- */
+.touch-mode .touch-ui { display: block; position: absolute; inset: 0; opacity: 0; transition: opacity .3s; }
+.touch-mode .touch-ui.visible { opacity: 1; }
+.touch-mode .touch-ui:not(.visible) .tbtn { pointer-events: none !important; }
+.tstick { position: absolute; width: 132px; height: 132px; margin: -66px 0 0 -66px; border-radius: 50%; border: 2px solid rgba(240,201,106,.45); background: radial-gradient(circle, rgba(20,30,70,.35), rgba(5,8,20,.25) 70%); box-shadow: 0 0 20px rgba(0,0,0,.35), inset 0 0 18px rgba(127,223,255,.15); opacity: 0; transition: opacity .15s; pointer-events: none; }
+.tstick.on { opacity: 1; }
+.tstick-knob { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle at 40% 35%, #c8f0ff, #2f7fe0); box-shadow: 0 0 18px rgba(127,223,255,.6); border: 2px solid rgba(255,255,255,.7); }
+
+.tbtn { position: absolute; pointer-events: auto; padding: 0; margin: 0; border-radius: 50%; border: 2px solid rgba(240,201,106,.6); background: radial-gradient(circle at 50% 40%, rgba(40,60,120,.72), rgba(8,12,30,.78)); color: #fff; box-shadow: 0 6px 16px rgba(0,0,0,.45), inset 0 0 12px rgba(127,223,255,.18); font: 800 11px var(--font-head); letter-spacing: 1px; text-shadow: 0 1px 2px #000; display: grid; place-items: center; touch-action: none; -webkit-user-select: none; user-select: none; outline: none; transition: transform .08s, background .08s; }
+.tbtn.down { transform: scale(.9); background: radial-gradient(circle at 50% 40%, rgba(240,201,106,.55), rgba(40,30,10,.8)); }
+.t-attack { width: calc(96px * var(--tui) / .75); height: calc(96px * var(--tui) / .75); right: calc(22px + var(--sr)); bottom: calc(22px + var(--sb)); font-size: 14px; border-width: 3px; border-color: var(--gold); box-shadow: 0 0 22px rgba(240,201,106,.35), 0 6px 16px rgba(0,0,0,.45); }
+.t-heavy { width: calc(62px * var(--tui) / .75); height: calc(62px * var(--tui) / .75); right: calc(22px + var(--sr) + 108px * var(--tui) / .75); bottom: calc(22px + var(--sb)); }
+.t-jump { width: calc(62px * var(--tui) / .75); height: calc(62px * var(--tui) / .75); right: calc(38px + var(--sr)); bottom: calc(22px + var(--sb) + 108px * var(--tui) / .75); }
+.t-dodge { width: calc(62px * var(--tui) / .75); height: calc(62px * var(--tui) / .75); right: calc(22px + var(--sr) + 96px * var(--tui) / .75); bottom: calc(22px + var(--sb) + 84px * var(--tui) / .75); font-size: 10px; }
+.t-lock { width: calc(46px * var(--tui) / .75); height: calc(46px * var(--tui) / .75); right: calc(22px + var(--sr) + 170px * var(--tui) / .75); bottom: calc(22px + var(--sb) + 76px * var(--tui) / .75); font-size: 9px; }
+.t-small { width: 40px; height: 40px; top: calc(12px + var(--st)); border-radius: 10px; font-size: 12px; }
+.t-pause { right: calc(var(--sr) + 128px); }
+.t-skills { right: calc(var(--sr) + 176px); font-size: 10px; }
+
+/* ---- HUD re-layout for small landscape screens ---- */
+.touch-mode .hud-left { left: calc(12px + var(--sl)); top: calc(8px + var(--st)); transform: scale(.62); transform-origin: top left; }
+.touch-mode .quest { left: calc(12px + var(--sl)); right: auto; top: calc(80px + var(--st)); width: 250px; padding: 8px 12px; transform: scale(.78); transform-origin: top left; }
+.touch-mode .quest.visible { transform: scale(.78); }
+.touch-mode .minimap { pointer-events: auto; right: calc(14px + var(--sr)); top: calc(12px + var(--st)); bottom: auto; transform: scale(.58) !important; transform-origin: top right; }
+.touch-mode .minimap-zone { top: auto; bottom: -30px; }
+.touch-mode .skills { pointer-events: none; left: auto; right: calc(var(--sr) + 22px + 250px * var(--tui) / .75); bottom: calc(10px + var(--sb)); width: 290px; flex-wrap: wrap; justify-content: center; align-items: center; gap: 22px 12px; transform: scale(var(--tui)); transform-origin: bottom right; }
+.touch-mode .skill { pointer-events: auto; touch-action: none; }
+.touch-mode .skill.down { transform: scale(.9); }
+.touch-mode .skill-name { display: none; }
+.touch-mode .skill-key { top: -9px; font-size: 10px; padding: 1px 6px; }
+.touch-mode .prompt { bottom: 50%; pointer-events: none; }
+.touch-mode .prompt.visible { pointer-events: auto; }
+.touch-mode .prompt::after { content: 'TAP'; font: 800 10px var(--font-head); letter-spacing: 2px; color: var(--gold-2); margin-left: 4px; }
+.touch-mode .tip { bottom: auto; top: 22%; max-width: 46vw; text-align: center; font-size: 12px; padding: 6px 14px; }
+.touch-mode .combo { right: calc(24px + var(--sr)); top: 24%; transform-origin: right top; }
+.touch-mode .combo, .touch-mode .combo.visible { scale: .7; }
+.touch-mode .target { top: calc(10px + var(--st)); width: min(300px, 40vw); }
+.touch-mode .boss { bottom: auto; top: calc(44px + var(--st)); width: min(520px, 46vw); }
+.touch-mode .boss-name { font-size: 14px; letter-spacing: 3px; }
+html.touch-mode #ui > .dialogue.visible { pointer-events: auto; }
+.touch-mode .dialogue { bottom: calc(14px + var(--sb)); width: min(720px, 88vw); padding: 16px 20px 14px; }
+.touch-mode .dialogue-text { font-size: 15px; min-height: 44px; }
+.touch-mode .dialogue-hint .key { display: none; }
+.touch-mode .dialogue-hint::before { content: 'TAP TO'; }
+.touch-mode .click-hint { display: none; }
+
+/* ---- menus ---- */
+.touch-mode .title-screen .menu-hint:not(.touch-hint) { display: none; }
+.touch-mode .touch-hint { display: flex; bottom: calc(14px + var(--sb)); }
+.touch-mode .pause .panel { display: none; }
+.touch-mode .menu-btn { -webkit-tap-highlight-color: transparent; }
+.touch-mode .panel { max-height: 92vh; padding: 18px 20px; width: min(960px, 94vw); }
+.touch-mode .panel-close { padding: 10px 14px; }
+
+@media (max-height: 520px) {
+  .logo { margin-bottom: 14px; }
+  .logo-kicker { font-size: 10px; letter-spacing: 6px; }
+  .logo-title { font-size: 40px; letter-spacing: 6px; }
+  .logo-sub { font-size: 11px; letter-spacing: 4px; margin-top: 4px; }
+  .logo-orn { margin-top: 8px; width: 260px; }
+  .menu-list { gap: 4px; }
+  .menu-btn { padding: 9px 0; font-size: 15px; width: 260px; }
+  .pause-title { font-size: 30px; margin-bottom: 10px; }
+  .death-title { font-size: 36px; }
+  .death-sub { font-size: 11px; letter-spacing: 2px; margin: 6px 16px 14px; }
+  .menu-hint { bottom: 8px; font-size: 10px; gap: 12px; }
+  .version { display: none; }
+  .panel h2 { font-size: 22px; }
+  .settings-grid { gap: 10px 24px; }
+  .char-grid { grid-template-columns: 220px 1fr; gap: 16px; }
+  .char-card .portrait { width: 110px; height: 110px; }
+  .area-name { font-size: 24px; }
+  .notice-title { font-size: 30px; }
+  .boss-intro-name { font-size: 38px; }
+  .evolve-to { font-size: 36px; }
+  .evolve-desc { font-size: 13px; }
+  .tech-name { font-size: 40px; letter-spacing: 5px; }
+  .levelup-title { font-size: 22px; }
+}
+@media (max-width: 700px) {
+  .skill-list { grid-template-columns: 1fr; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .char-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- portrait warning ---- */
+html.touch-mode #ui > .rotate-hint { position: absolute; inset: 0; z-index: 60; background: rgba(5,6,18,.94); place-items: center; text-align: center; pointer-events: auto; color: #fff; padding: 30px; }
+.touch-mode .rotate-hint.visible { display: grid; }
+.rotate-hint b { display: block; font: 800 18px var(--font-head); letter-spacing: 4px; color: var(--gold-2); margin-top: 18px; }
+.rotate-hint small { display: block; font: 600 13px var(--font-body); color: #bcd; margin-top: 10px; line-height: 1.5; }
+.rotate-icon { width: 46px; height: 76px; margin: 0 auto; border: 3px solid var(--cyan); border-radius: 10px; animation: rotPhone 2.2s ease-in-out infinite; box-shadow: 0 0 20px rgba(127,223,255,.4); }
+@keyframes rotPhone { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+
+/* hidden menus must never catch taps/clicks meant for the visible one */
+.menu:not(.visible) .menu-btn, .death:not(.visible) .menu-btn { pointer-events: none; }
+#ui:has(.pause.visible) .tip, #ui:has(.panel-host.visible) .tip { opacity: 0; }

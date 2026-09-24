@@ -1,4 +1,4 @@
-import { DEBUG } from './Settings';
+import { DEBUG, IS_TOUCH } from './Settings';
 
 export class Input {
   keys = new Set<string>();
@@ -13,6 +13,10 @@ export class Input {
   enabled = true;
   /** debug: accept mouse input without pointer lock (?debug in URL) */
   allowUnlocked = DEBUG;
+  /** touch mode: no pointer lock; "locked" just means gameplay input is live */
+  touch = IS_TOUCH;
+  /** analog movement from the on-screen joystick (x right, y forward) */
+  stick = { x: 0, y: 0 };
   private canvas: HTMLCanvasElement;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -63,6 +67,7 @@ export class Input {
   }
 
   requestLock() {
+    if (this.touch) { this.locked = true; return; }
     if (this.locked) return;
     try {
       const p = (this.canvas as any).requestPointerLock({ unadjustedMovement: true });
@@ -72,6 +77,7 @@ export class Input {
     }
   }
   releaseLock() {
+    if (this.touch) { this.locked = false; this.keys.clear(); this.mouseButtons.clear(); this.stick.x = this.stick.y = 0; return; }
     if (document.pointerLockElement) document.exitPointerLock();
   }
 
@@ -99,6 +105,7 @@ export class Input {
     if (this.down('KeyS') || this.down('ArrowDown')) y -= 1;
     if (this.down('KeyD') || this.down('ArrowRight')) x += 1;
     if (this.down('KeyA') || this.down('ArrowLeft')) x -= 1;
+    if (this.enabled) { x += this.stick.x; y += this.stick.y; }
     const l = Math.hypot(x, y);
     if (l > 1) {
       x /= l;
