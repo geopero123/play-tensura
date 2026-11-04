@@ -201,19 +201,36 @@ export class Menus {
     const p = this.getProgression();
     const body = h('attribute-panel');
     if (!p) return this.panel('STATS', 'START YOUR ADVENTURE FIRST', body);
-    body.appendChild(h('attribute-summary', `<b>${p.statPoints}</b> POINTS AVAILABLE <small>5 starting points · +3 each level · Level ${p.level}</small>`));
+    const summary = h('attribute-summary', `<b></b> POINTS AVAILABLE <small>5 starting points · +3 each level · Level ${p.level}</small>`);
+    const points = summary.querySelector('b')!;
+    body.appendChild(summary);
+    const rows: { id: Attribute; value: HTMLElement; button: HTMLButtonElement }[] = [];
     for (const [id, def] of Object.entries(ATTRIBUTES)) {
       const row = h('attribute-row');
-      row.innerHTML = `<div><b>${def.name}</b><small>${def.desc}</small></div><strong>${p.attributes[id as Attribute]}</strong>`;
-      const b = document.createElement('button'); b.textContent = '+'; b.setAttribute('aria-label', 'Increase ' + def.name);
-      b.disabled = p.statPoints < 1 || p.allocationLocked;
-      b.onclick = () => { if (p.allocate(id as Attribute)) { sfx('ui'); this.show('stats'); } };
-      row.appendChild(b); body.appendChild(row);
+      row.innerHTML = `<div><b>${def.name}</b><small>${def.desc}</small></div><strong></strong>`;
+      const button = document.createElement('button'); button.textContent = '+'; button.setAttribute('aria-label', 'Increase ' + def.name);
+      button.onclick = () => { if (p.allocate(id as Attribute)) { sfx('ui'); refresh(); } };
+      rows.push({ id: id as Attribute, value: row.querySelector('strong')!, button });
+      row.appendChild(button); body.appendChild(row);
     }
-    body.appendChild(h('derived-stats', `HP <b>${p.maxHp}</b> · MP <b>${p.maxMp}</b> · Melee <b>${p.atk.toFixed(1)}</b> · Magic <b>${p.magicAtk.toFixed(1)}</b><br>Resistance ${(p.def * 100).toFixed(0)}% · Critical ${(p.critChance * 100).toFixed(1)}% · MP regen ${p.mpRegen.toFixed(2)}/s`));
-    const reset = document.createElement('button'); reset.className = 'room-button'; reset.textContent = 'RESET POINTS · FREE'; reset.disabled = p.allocationLocked;
-    reset.onclick = () => { p.resetAttributes(); this.show('stats'); };
+    const derived = h('derived-stats', 'HP <b></b> · MP <b></b> · Melee <b></b> · Magic <b></b><br>Resistance <span></span>% · Critical <span></span>% · MP regen <span></span>/s');
+    const values = derived.querySelectorAll('b, span');
+    body.appendChild(derived);
+    const reset = document.createElement('button'); reset.className = 'room-button'; reset.textContent = 'RESET POINTS · FREE';
+    reset.onclick = () => { p.resetAttributes(); refresh(); };
     body.appendChild(reset);
+    // Keep panel, focus and scroll position intact when spending/resetting points.
+    const refresh = () => {
+      points.textContent = String(p.statPoints);
+      for (const row of rows) {
+        row.value.textContent = String(p.attributes[row.id]);
+        row.button.disabled = p.statPoints < 1 || p.allocationLocked;
+      }
+      const stats = [p.maxHp, p.maxMp, p.atk.toFixed(1), p.magicAtk.toFixed(1), (p.def * 100).toFixed(0), (p.critChance * 100).toFixed(1), p.mpRegen.toFixed(2)];
+      values.forEach((value, i) => { value.textContent = String(stats[i]); });
+      reset.disabled = p.allocationLocked;
+    };
+    refresh();
     return this.panel('CHARACTER STATS', 'BUILD YOUR OWN SLIME', body);
   }
 
