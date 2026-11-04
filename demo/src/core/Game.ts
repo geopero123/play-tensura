@@ -1249,8 +1249,8 @@ export class Game {
     const p = this.player.pos;
     const blips = this.minimapBlips;
     blips.length = 0;
-    const friend = this.multiplayer?.friendPosition;
-    if (friend) blips.push({ x: friend.x, z: friend.z, kind: 'friend', label: 'Friend' });
+    const friends = this.multiplayer?.friendPositions ?? [];
+    for (const friend of friends) blips.push({ x: friend.x, z: friend.z, kind: 'friend', label: 'Friend' });
     for (const e of this.enemies) {
       if (!e.alive || e.kind === 'dummy') continue;
       if (Math.hypot(e.pos.x - p.x, e.pos.z - p.z) > 130) continue;

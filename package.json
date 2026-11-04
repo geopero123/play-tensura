@@ -8,17 +8,18 @@
     "build": "tsc --noEmit && vite build && npm run build:demo",
     "preview": "vite preview",
     "build:demo": "tsc --noEmit -p demo/tsconfig.json && vite build demo --base=/demo/ --outDir=../dist/demo",
-    "test:demo": "cd demo && node tests/gameplay.test.mjs && node tests/bridge.test.mjs"
+    "test:demo": "cd demo && node tests/gameplay.test.mjs && node tests/bridge.test.mjs",
+    "test:demo:live": "cd demo && node tests/world-live.test.mjs"
   },
   "dependencies": {
-    "three": "^0.180.0",
-    "peerjs": "^1.5.5"
+    "@supabase/supabase-js": "2.119.0",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@types/three": "^0.180.0",
+    "esbuild": "^0.28.2",
     "typescript": "^5.9.2",
-    "vite": "^7.1.5",
-    "esbuild": "^0.28.2"
+    "vite": "^7.1.5"
   },
   "allowScripts": {
     "esbuild": true

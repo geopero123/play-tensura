@@ -117,7 +117,7 @@ export class Menus {
     if (s === 'settings') this.panelHost.appendChild(this.buildSettings());
     if (s === 'characters') this.panelHost.appendChild(this.buildCharacters());
     if (s === 'stats') this.panelHost.appendChild(this.buildStats());
-    if (s === 'multiplayer') this.panelHost.appendChild(this.panel('MULTIPLAYER', 'PRIVATE ROOMS · FRIENDLY DUELS', this.getMultiplayer()));
+    if (s === 'multiplayer') this.panelHost.appendChild(this.panel('MULTIPLAYER', 'PUBLIC WORLD · FRIENDLY DUELS', this.getMultiplayer()));
     if (s === 'skills') this.panelHost.appendChild(this.buildSkills());
   }
 
