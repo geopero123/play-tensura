@@ -68,7 +68,7 @@ export class Multiplayer {
     for (const [id, v] of this.visitors) if (!present.has(id)) { this.visitors.delete(id); v.session.destroy(); }
     for (const id of present) {
       if (this.visitors.has(id) || this.visitors.size >= 31) continue;
-      const session = new DuelSession(this.game), connection = new ServerConnection(this.link, id);
+      const session = new DuelSession(this.game, 'Player ' + id.slice(0,4).toUpperCase()), connection = new ServerConnection(this.link, id);
       const visitor = {session, connection, seen:performance.now(), budget:0, budgetAt:0};
       this.visitors.set(id, visitor);
       session.onChange = () => { if (session.busy) this.selected=id; this.onChange(); };

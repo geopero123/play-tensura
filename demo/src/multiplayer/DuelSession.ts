@@ -46,8 +46,23 @@ export class DuelSession {
   private timeout: ReturnType<typeof setTimeout> | undefined;
   onChange = () => {};
 
-  constructor(private game: Game) {
+  constructor(private game: Game, label?: string) {
     this.model.bodyColor.set(0xc39bff);
+    if (label) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 64;
+      const ink = canvas.getContext?.('2d');
+      if (ink) {
+        ink.fillStyle = '#171328df'; ink.fillRect(8, 7, 240, 50);
+        ink.fillStyle = '#e5d6ff'; ink.font = 'bold 25px sans-serif';
+        ink.textAlign = 'center'; ink.fillText(label, 128, 41);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false, toneMapped: false }));
+        tag.position.y = 1.65; tag.scale.set(2.4, .6, 1);
+        this.model.root.add(tag);
+      }
+    }
     this.model.root.visible = false;
     game.renderer.scene.add(this.model.root);
     this.rival = {
@@ -89,7 +104,7 @@ export class DuelSession {
   destroy() {
     this.leave(); this.game.combat.unregister(this.rival); this.game.renderer.scene.remove(this.model.root);
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
-    this.model.root.traverse(o => { if (o instanceof THREE.Mesh) { geometries.add(o.geometry); for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m); } });
+    this.model.root.traverse(o => { if (o instanceof THREE.Sprite) { o.material.map?.dispose(); o.material.dispose(); } if (o instanceof THREE.Mesh) { geometries.add(o.geometry); for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m); } });
     geometries.forEach(g=>g.dispose()); materials.forEach(m=>m.dispose()); this.badge.remove();
   }
   private attach(c: DuelConnection) {

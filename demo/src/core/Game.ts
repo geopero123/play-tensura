@@ -124,6 +124,9 @@ export class Game {
   private nightLevel = 0;
   private introShown = false;
   private tmp = new THREE.Vector3();
+  private guide = document.createElement('div');
+  private guideArrow = document.createElement('span');
+  private guideText = document.createElement('span');
   private uiRoot: HTMLElement;
   private fpsAcc = 0; private fpsN = 0; fps = 60;
   /** debug profiler: accumulated ms per section (reset by reading) */
@@ -135,6 +138,11 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.uiRoot = uiRoot;
+    this.guide.className = 'first-quest-guide';
+    this.guideArrow.textContent = '➤';
+    this.guide.append(this.guideArrow, this.guideText);
+    this.guide.hidden = true;
+    uiRoot.appendChild(this.guide);
     this.input = new Input(canvas);
     this.renderer = new Renderer(canvas, this.settings.preset);
     this.gcam = new GameCamera(this.renderer.camera);
@@ -1313,7 +1321,7 @@ export class Game {
         case 5: return this.elder.pos;
       }
     }
-    if (this.questStep < 0 && this.playT > 20) return this.mira.pos;
+    if (this.questStep < 0) return this.mira.pos;
     return null;
   }
 
@@ -1336,6 +1344,14 @@ export class Game {
     const fwd = this.gcam.getForward(this.tmp);
     this.minimap.setVisible(this.state === 'playing' || this.state === 'cinematic' || this.state === 'dead');
     this.touch?.sync(this.state === 'playing' && this.menus.screen === 'none' && !this.dialogue.active && (!this.multiplayer.dueling || this.multiplayer.fighting));
+    this.guide.hidden = this.state !== 'playing' || this.questStep >= 0 || this.dialogue.active || this.dungeon || this.multiplayer.dueling;
+    if (!this.guide.hidden) {
+      const dx = this.mira.pos.x - p.x, dz = this.mira.pos.z - p.z;
+      const distance = Math.hypot(dx, dz);
+      const angle = Math.atan2(-(dx*fwd.x + dz*fwd.z), -dx*fwd.z + dz*fwd.x);
+      this.guideArrow.style.transform = 'rotate(' + angle + 'rad)';
+      this.guideText.textContent = distance < 3 ? 'Talk to Mira to begin' : 'Find Mira · ' + Math.round(distance) + 'm';
+    }
     this.minimap.update({ x: p.x, z: p.z, playerYaw: this.player.yaw, camFx: fwd.x, camFz: fwd.z, blips, objective: obj ? { x: obj.x, z: obj.z } : null, zone: this.zoneCurrent || 'GREAT JURA FOREST' }, dt);
   }
 

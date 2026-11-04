@@ -552,3 +552,7 @@ html.touch-mode.portrait-mode #ui > .rotate-hint.visible { display: block; inset
 }
 html.touch-mode.portrait-mode #ui:has(.menu.visible) > .rotate-hint.visible { display: none; }
 .portrait-mode .panel h2 { font-size: 20px; letter-spacing: 2px; padding-right: 74px; }
+
+.first-quest-guide { position:absolute; top: max(46px, calc(env(safe-area-inset-top) + 36px)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:8px; pointer-events:none; border-radius:16px; padding:5px 10px; background:#101824da; color:#fff1c2; font:700 12px sans-serif; white-space:nowrap }
+.first-quest-guide[hidden], #ui:has(.menu.visible) .first-quest-guide { display:none }
+.first-quest-guide span:first-child { display:inline-block; color:#ffd575 }

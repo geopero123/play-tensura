@@ -214,17 +214,17 @@ export class SkillSystem {
     let life = T(lvl, [1.4, 1.4, 1.4, 1.5, 2.2]);
     const d = dir.clone();
     const spec = this.spec(mult, 'water', 1.2 * scale, { knockback: 4, stagger: 0.4, launch: lvl >= 4 ? 6 : 0, skillId: 'waterBlade' });
-    const spin = rand(-8, 8);
+    const spin = rand(-2, 2);
     this.list.push({ update: (dt) => {
       t += dt;
       if (t < 0) return true;
       g.position.addScaledVector(d, speed * dt);
       g.rotateZ(spin * dt);
-      const pulse = 1 + Math.sin(t * 40) * 0.08;
-      g.scale.setScalar(scale * pulse);
+      const edge = 1 + .17 * Math.exp(-12 * t);
+      g.scale.set(scale * edge, scale / edge, scale);
       // trail
       this.particles.emit({ pos: g.position, count: 2, spread: 0.3 * scale, life: 0.35, size: 0.16 * scale, color: [color, 0xffffff, 0x2f7fe0], shape: Shape.GLOW, vel: { x: -d.x * 2, y: 0.5, z: -d.z * 2 }, velSpread: 1, gravity: 4 });
-      this.particles.emit({ pos: g.position, count: 1, life: 0.3, size: 0.9 * scale, sizeEnd: 1.6, color: [color], alpha: 0.35, shape: Shape.RING });
+      this.particles.emit({ pos: g.position, count: 1, life: 0.3, size: 0.9 * scale, sizeEnd: 0.12 * scale, color: [0xc9f6ff], alpha: 0.6, shape: Shape.DOT, stretch: 2.5, vel: { x: -d.x * 5, y: -1, z: -d.z * 5 } });
       const hits = this.combat.hit(ctx.combatant, 'enemy', g.position, d, spec, hitSet);
       for (const hh of hits) {
         const hp = hh.pos.clone().setY(hh.pos.y + hh.height * 0.5);
@@ -315,8 +315,8 @@ export class SkillSystem {
     this.fx.burst(target.clone().setY(target.y + 1), 0x5a1aa0, radius * 0.85, 0.4);
     this.fx.shockwave(target, edge, radius * 2, 0.6);
     this.fx.flash(target.clone().setY(target.y + 1.5), 0xc080ff, radius, 0.2, cam);
-    this.particles.emit({ pos: target.clone().setY(target.y + 0.4), count: 40, spread: radius * 0.4, velSpread: 4, velUp: 6, life: 1.0, lifeVar: 0.4, size: 0.9, sizeVar: 0.3, sizeEnd: 0.4, color: [dark, 0x2a0a4a, color], shape: Shape.FLAME, drag: 1.5 });
-    this.particles.emit({ pos: target.clone().setY(target.y + 0.3), count: 30, spread: radius * 0.3, velSpread: 8, velUp: 5, life: 0.7, size: 0.16, color: [edge, 0xffffff, color], shape: Shape.SPARK, stretch: 1.2, gravity: 8, drag: 1 });
+    this.particles.emit({ pos: target.clone().setY(target.y + 0.4), count: 30, spread: radius * 0.28, velSpread: 2.5, velUp: 9, life: 1.0, lifeVar: 0.4, size: 0.9, sizeVar: 0.3, sizeEnd: 0.4, color: [dark, 0x2a0a4a, color], shape: Shape.FLAME, drag: 1.5 });
+    this.particles.emit({ pos: target.clone().setY(target.y + 0.3), count: 18, spread: radius * 0.34, velSpread: 5, velUp: 8, life: 0.7, size: 0.16, color: [edge, 0xffffff, color], shape: Shape.SPARK, stretch: 1.2, gravity: 8, drag: 1 });
     this.particles.emit({ pos: target.clone().setY(target.y + 1), count: 14, spread: radius * 0.4, velUp: 2, velSpread: 1.5, life: 1.8, size: 1.4, sizeEnd: 2.6, color: [0x0a0212, 0x2a1040], alpha: 0.7, shape: Shape.SMOKE, additive: false, rotSpeed: 2, gravity: -0.8 });
     sfx('fireHit', 1.1);
     this.post.chromaTarget = 0.012;
@@ -943,11 +943,7 @@ export class SkillSystem {
       const p = lensPos.clone().add(new THREE.Vector3(Math.cos(a) * ring, rand(-2, 4) + (i % 2) * 2.5, Math.sin(a) * ring));
       makeLens(p, T(lvl, [2.4, 2.6, 2.6, 2.8, 3]), 0.6 + i * 0.13);
     }
-    // stars: the night the technique brings with it
-    for (let i = 0; i < 90; i++) {
-      const a = rand(0, Math.PI * 2), r = rand(15, 70), y = rand(12, 55);
-      this.particles.emit({ pos: { x: origin.x + Math.cos(a) * r, y: origin.y + y, z: origin.z + Math.sin(a) * r }, count: 1, life: castTime + 3.5, size: rand(0.12, 0.3), sizeEnd: 0.05, color: [white, ice, cyan], shape: Shape.STAR, vel: { x: 0, y: 0, z: 0 }, rotSpeed: rand(-1, 1) });
-    }
+    // Draw parallel sunlight into the water lenses as they form.
     // a column of water drawn up out of the caster into the lenses
     this.fx.pillar(origin, cyan, 0.16, 40, castTime, { fadeIn: 0.8 });
     const feet = this.circle({ color: ice, radius: 4, layers: 3, seed: 121, intensity: 0.55 }, origin.clone().setY(origin.y + 0.08));
@@ -964,6 +960,8 @@ export class SkillSystem {
       for (const L of lenses) {
         if (!L.h.group.visible && t >= L.born) {
           L.h.group.visible = true; L.circle.group.visible = true;
+          const sunlight = L.pos.clone().add(new THREE.Vector3(-7, 18, -4));
+          this.fx.ray(sunlight, L.pos, 0xffe7ad, 0.065, Math.max(.3, castTime - t));
           this.fx.shockwave(L.pos, ice, L === lenses[0] ? mainR * 2.5 : 5, 0.5, { y: 0 });
           this.particles.emit({ pos: L.pos, count: 10, spread: 1, velSpread: 3, life: 0.6, size: 0.18, color: [cyan, white], shape: Shape.GLOW });
           sfx('water', L === lenses[0] ? 0.8 : 0.35);
@@ -1073,16 +1071,16 @@ export class SkillSystem {
 
   /** one Megiddo beam from a lens to a ground point */
   private beam(ctx: SkillContext, from: THREE.Vector3, p: THREE.Vector3, mult: number, lvl: number, index: number, scale = 1) {
-    const white = 0xffffff, gold = 0x9fe8ff;
+    const white = 0xfffdf2, gold = 0xffd68c;
     const cam = this.combat.camera;
     const top = p.clone().setY(p.y + 1);
     const w = T(lvl, [0.16, 0.16, 0.18, 0.2, 0.22]) * scale;
     // needle-thin hot core, a gold sheath, then a faint slow-fading halo so the sky keeps a lattice of afterglow lines
-    this.fx.ray(from, top, white, w * 0.5, 0.4);
-    this.fx.ray(from, top, gold, w * 1.1, 0.32);
-    this.fx.ray(from, top, 0x5fd8ff, w * 1.8, 0.6);
-    this.fx.pillar(p, white, 0.26 * scale, 24, 0.4, { fadeIn: 0.02 });
-    this.fx.pillar(p, gold, 0.55 * scale, 8, 0.3, { fadeIn: 0.02 });
+    this.fx.ray(from, top, white, w * 0.35, 0.22);
+    this.fx.ray(from, top, gold, w * 0.8, 0.21);
+    this.fx.ray(from, top, 0x5fd8ff, w * 1.3, 0.35);
+    this.fx.flash(from, gold, 1.4 * scale, .12, cam);
+
     this.fx.flash(top, white, 1.8 * scale, 0.18, cam);
     this.fx.burst(top, gold, 1.3 * scale, 0.28);
     // anime lens-flare cross: two flat slashes at right angles
@@ -1091,7 +1089,7 @@ export class SkillSystem {
     this.fx.shockwave(p, white, 5 * scale, 0.45, { y: 0.1 });
     this.fx.shockwave(p, gold, 3 * scale, 0.32, { y: 0.3 });
     this.fx.groundMark(p, 0xbfeeff, 1.6 * scale, 7, true);
-    this.particles.emit({ pos: top, count: 26, velSpread: 11, velUp: 9, life: 0.8, size: 0.15, color: [gold, white], shape: Shape.SPARK, stretch: 1.6, gravity: 12, drag: 1.2 });
+    this.particles.emit({ pos: top, count: 14, velSpread: 11, velUp: 9, life: 0.8, size: 0.15, color: [gold, white], shape: Shape.SPARK, stretch: 1.6, gravity: 12, drag: 1.2 });
     this.particles.emit({ pos: top, count: 8, spread: 0.4, velUp: 14, velSpread: 2, life: 0.6, size: 0.12, color: [white], shape: Shape.SPARK, stretch: 3, gravity: 0 });
     this.particles.emit({ pos: p.clone().setY(p.y + 0.3), count: 8, spread: 0.6, velUp: 4, life: 1.2, size: 1.0, sizeEnd: 2.0, color: [0xd0d0e0, 0xffffff], alpha: 0.35, shape: Shape.SMOKE, additive: false, rotSpeed: 2 });
     // post: white flash, radial blur centered on the impact, impact frame on the first and every third beam
@@ -1124,7 +1122,7 @@ export class SkillSystem {
 
   /** tier 5 finale: the main lens fires a wide pillar of daylight that sweeps forward */
   private solarJudgment(ctx: SkillContext, lensPos: THREE.Vector3, aim: THREE.Vector3) {
-    const white = 0xffffff, gold = 0x9fe8ff;
+    const white = 0xfffdf2, gold = 0xffd68c;
     const dir = aim.clone().sub(ctx.pos).setY(0).normalize();
     const start = ctx.pos.clone().addScaledVector(dir, 3);
     const end = ctx.pos.clone().addScaledVector(dir, 22);

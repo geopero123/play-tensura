@@ -406,6 +406,11 @@ export class Effects {
         g.scale.setScalar(pop);
         rim.rotation.z += dt * 0.5; rim2.rotation.z -= dt * 0.8; rim3.rotation.z += dt * 1.3;
         const glow = Math.max(handle.charge, handle.flash);
+        // A water bead flattens into an optical lens as its focus tightens.
+        body.scale.y = radius * (.39 - .29 * handle.charge);
+        sheen.position.set(radius * .17, body.scale.y * .67, -radius * .11);
+        rim2.scale.setScalar(radius * (.74 - .38 * glow));
+        rim3.scale.setScalar(radius * (.48 - .32 * glow));
         (core.material as THREE.MeshBasicMaterial).opacity = glow;
         (coreHalo.material as THREE.MeshBasicMaterial).opacity = glow * 0.25;
         core.scale.setScalar(radius * (0.05 + glow * 0.07 + handle.flash * 0.14));
