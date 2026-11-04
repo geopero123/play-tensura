@@ -5,16 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && vite build && npm run build:demo",
+    "preview": "vite preview",
+    "build:demo": "tsc --noEmit -p demo/tsconfig.json && vite build demo --base=/demo/ --outDir=../dist/demo",
+    "test:demo": "cd demo && node tests/gameplay.test.mjs && node tests/bridge.test.mjs"
   },
   "dependencies": {
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "peerjs": "^1.5.5"
   },
   "devDependencies": {
     "@types/three": "^0.180.0",
     "typescript": "^5.9.2",
-    "vite": "^7.1.5"
+    "vite": "^7.1.5",
+    "esbuild": "^0.28.2"
   },
   "allowScripts": {
     "esbuild": true

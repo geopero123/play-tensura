@@ -68,3 +68,12 @@ Hidden console commands (open DevTools with F12 once the title screen is up): `c
 
 Set `localStorage['tr-debug'] = '1'` (or add `?debug` to the URL) to enable mouse input without pointer lock and a per-system profiler at `window.__game.profile`.
 # play-tensura
+
+
+## Updated demo at /demo
+
+The current public game remains at `/`. The phone controls, character stats, private-room multiplayer beta, and corrected bridge are built separately under `/demo/`. Edit `demo/src/` for this version. Both builds are packaged in one deployment so the demo has a permanent URL on the same domain.
+
+`npm run build` builds both versions. `npm run build:demo` builds only the demo. `npm run test:demo` verifies gameplay state and the bridge crossing. The demo uses `/demo/assets/` so its files cannot conflict with the main game.
+
+The bridge follows the glade-to-ruins path and now has a walking surface matching its deck, connected ramps at both banks, rail collision, and clearance from procedural scenery. Player and enemy movement, camera height, and ground spell effects use the raised bridge surface; river rendering keeps the original riverbed.
