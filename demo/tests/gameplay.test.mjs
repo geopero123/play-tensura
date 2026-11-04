@@ -54,11 +54,33 @@ try {
    skills:{clear(){}},gcam:{lockTarget:null},notes:{say(){}},prepareDuel(){},
    menus:{show(){}},resume(){this.state='playing';},
    combat:{register(c){this.rival=c;},duelTarget:null},
-   player:{pos,yaw:0,facing:new THREE.Vector3(),state:'idle',alive:true,target:null,
+   player:{terrain:{walkableHeightAt(){return 0;},walkableNormalAt(){return new THREE.Vector3(0,1,0);}},colliders:{blocked(){return false;}},radius:.45,pos,yaw:0,facing:new THREE.Vector3(),state:'idle',alive:true,target:null,
     spawn(v){this.pos.copy(v);this.alive=true;prog.hp=prog.maxHp;prog.mp=prog.maxMp;},
     takeHit(hit){prog.hp-=hit.damage;if(prog.hp<=0)g.net.defeated();return true;}}
   }; return g;
  };
+ // Different saved positions must rendezvous and render before reporting synced.
+ const host=makeGame(),guest=makeGame();
+ host.player.pos.set(90,0,80); guest.player.pos.set(-100,0,-80);
+ guest.prog.hp=43; guest.prog.mp=17;
+ host.net=new Multiplayer(host,new Element()); guest.net=new Multiplayer(guest,new Element());
+ const settle=()=>new Promise(r=>setImmediate(r));
+ await host.net.open(); await settle(); await guest.net.open(host.net.code); await settle();
+ host.net.update(.1); guest.net.update(.1); await settle();
+ host.net.update(.1); guest.net.update(.1); await settle();
+ assert(guest.player.pos.distanceTo(host.player.pos)<8,'guest joins near host instead of their distant save');
+ assert.equal(guest.prog.hp,43); assert.equal(guest.prog.mp,17);
+ assert(host.net.model.root.visible&&guest.net.model.root.visible,'both remote avatars visible');
+ assert(host.net.model.root.position.distanceTo(guest.player.pos)<8);
+ assert(host.net.status.includes('synced')); assert(guest.net.status.includes('synced'));
+ guest.player.pos.set(-60,0,-50); guest.net.update(.1); await settle();
+ assert(guest.player.pos.distanceTo(host.player.pos)>100,'automatic meetup happens only once');
+ assert(guest.net.meetFriend()); await settle();
+ assert(guest.player.pos.distanceTo(host.player.pos)<8); assert.equal(guest.prog.hp,43);
+ const before=guest.player.pos.clone(); guest.player.colliders.blocked=()=>true;
+ assert.equal(guest.net.meetFriend(),false); assert(guest.player.pos.equals(before),'blocked meetup does not teleport');
+ host.net.leave(); guest.net.leave();
+ console.log('PASS: distant saves meet up, both avatars visible, resource preservation, manual meetup, unsafe placement refusal');
  const a=makeGame(),b=makeGame(); a.net=new Multiplayer(a,new Element()); b.net=new Multiplayer(b,new Element());
  const flush=()=>new Promise(r=>setImmediate(r));
  await a.net.open(); await flush(); await b.net.open(a.net.code); await flush();
@@ -67,6 +89,7 @@ try {
  // Room capacity: a third peer must not replace either connected player.
  const c=makeGame(); c.net=new Multiplayer(c,new Element()); await c.net.open(a.net.code); await flush();
  assert(!c.net.connected); assert(a.net.connected&&b.net.connected); c.net.leave();
+ const bAdventure=b.player.pos.clone();
  a.net.challenge(); await flush(); assert.equal(b.net.pending,'incoming');
  // An unsolicited start cannot force a duel before the accept button was pressed.
  b.net.receive({t:'start',id:b.net.requestId}); assert.equal(b.net.dueling,false);
@@ -80,7 +103,7 @@ try {
  b.net.lastHitAt=-1000; b.net.receive({t:'hit',round:b.net.round,damage:Infinity,dir:[1,0,0]}); assert.equal(b.prog.hp,80);
  b.net.lastHitAt=-1000;
  a.combat.rival.takeHit({source:a.player,damage:100,type:'heavy',element:'physical',dir:new THREE.Vector3(1,0,0),knockback:2,launch:0,stagger:.2});
- await flush(); assert(!a.net.dueling&&!b.net.dueling); assert.equal(b.prog.hp,100); assert.equal(b.player.pos.z,4); assert.equal(b.combat.duelTarget,null);
+ await flush(); assert(!a.net.dueling&&!b.net.dueling); assert.equal(b.prog.hp,100); assert(b.player.pos.equals(bAdventure)); assert.equal(b.combat.duelTarget,null);
  a.net.update(.1); b.net.update(.1); await flush();
  a.net.challenge(); await flush(); b.net.accepted=true; b.net.send({t:'accept',id:b.net.requestId}); await flush();
  assert(a.net.dueling&&b.net.dueling); b.net.leave(); await flush();

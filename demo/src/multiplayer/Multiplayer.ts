@@ -37,6 +37,9 @@ export class Multiplayer {
   private targetYaw = 0;
   private remoteReady = false;
   private hasSnapshot = false;
+  private joinedNearHost = false;
+  private openedAt = 0;
+  private syncWarned = false;
   private model = new PlayerModel();
   private rival: Combatant & { devourable: boolean };
   private badge: HTMLElement;
@@ -111,8 +114,10 @@ export class Multiplayer {
     this.timeout = setTimeout(() => { if (this.conn === c && !c.open) this.leave('Connection timed out. Try Wi-Fi or create another room.'); }, 25000);
     c.on('open', () => {
       if (this.conn !== c) return;
-      clearTimeout(this.timeout); this.lastReceived = performance.now();
-      this.changed('Friend connected · resume to explore, or challenge them to a duel.');
+      clearTimeout(this.timeout); this.lastReceived = this.openedAt = performance.now();
+      this.syncWarned = false;
+      this.sendState();
+      this.changed('Connection open · waiting for your friend’s position…');
     });
     c.on('data', data => {
       if (this.conn !== c) return;
@@ -134,10 +139,21 @@ export class Multiplayer {
         if (!vector(p.pos) || !finite(p.yaw, -1000, 1000) || !finite(p.hp, 0, 1000000) || !finite(p.maxHp, 1, 1000000)) return;
         this.target.fromArray(p.pos); this.targetYaw = p.yaw;
         this.rival.hp = p.hp; this.rival.maxHp = p.maxHp; this.rival.alive = p.hp > 0;
+        const wasReady = this.remoteReady, first = !this.hasSnapshot;
         this.remoteReady = p.ready === true;
-        if (!this.hasSnapshot) this.rival.pos.copy(this.target);
+        if (!this.hasSnapshot || this.rival.pos.distanceToSquared(this.target) > 400) this.rival.pos.copy(this.target);
         this.hasSnapshot = true;
         this.model.showBlade(p.attacking === true);
+        this.model.root.position.copy(this.rival.pos);
+        this.model.root.visible = this.game.state !== 'title';
+        if (!this.host && !this.joinedNearHost && this.remoteReady && this.ready && !this.dueling) {
+          this.joinedNearHost = true;
+          this.meetFriend(false);
+        }
+        if (first || wasReady !== this.remoteReady || this.syncWarned) {
+          this.syncWarned = false;
+          this.changed('Friend synced · resume to explore together, or challenge them to a duel.');
+        }
         break;
       }
       case 'challenge':
@@ -223,7 +239,38 @@ export class Multiplayer {
     const c = this.conn, p = this.peer; this.conn = null; this.peer = null;
     c?.close(); p?.destroy();
     this.pending = null; this.code = ''; this.remoteReady = false; this.hasSnapshot = false;
+    this.joinedNearHost = false; this.syncWarned = false; this.sendT = 0;
     this.model.root.visible = false; this.changed(message);
+  }
+  private sendState() {
+    const g = this.game;
+    this.send({ t: 'state', pos: g.player.pos.toArray(), yaw: g.player.yaw, hp: Math.max(0, g.prog.hp), maxHp: g.prog.maxHp, ready: this.ready, attacking: ['attack', 'heavy', 'cast'].includes(g.player.state) });
+  }
+  /** Only move the local player; preserve their adventure resources. */
+  meetFriend(resume = true) {
+    if (!this.connected || !this.hasSnapshot || !this.remoteReady || !this.ready || this.dueling || this.pending) return false;
+    const g = this.game, p = g.player;
+    let spot: THREE.Vector3 | null = null;
+    for (const radius of [3, 5, 7]) {
+      for (let i = 0; i < 12; i++) {
+        const angle = this.targetYaw + Math.PI + i * Math.PI / 6;
+        const x = this.target.x + Math.sin(angle) * radius, z = this.target.z + Math.cos(angle) * radius;
+        const y = p.terrain.walkableHeightAt(x, z);
+        if (Math.abs(x) > 230 || Math.abs(z) > 230 || Math.abs(y - this.target.y) > 3 || p.terrain.walkableNormalAt(x, z).y < 0.7 || p.colliders.blocked(x, z, p.radius + 0.25)) continue;
+        spot = new THREE.Vector3(x, y, z); break;
+      }
+      if (spot) break;
+    }
+    if (!spot) { this.changed('No safe spot beside your friend. Ask them to move onto open ground, then try GO TO FRIEND.'); return false; }
+    const hp = g.prog.hp, mp = g.prog.mp;
+    p.spawn(spot); g.prog.hp = hp; g.prog.mp = mp;
+    p.yaw = Math.atan2(this.target.x - spot.x, this.target.z - spot.z);
+    p.facing.set(Math.sin(p.yaw), 0, Math.cos(p.yaw));
+    p.target = null; g.gcam.lockTarget = null;
+    this.sendState();
+    this.changed('You are beside your friend. Look for the purple slime.');
+    if (resume) { g.menus.show('none'); g.resume(); }
+    return true;
   }
   update(dt: number) {
     const g = this.game, now = performance.now();
@@ -231,7 +278,11 @@ export class Multiplayer {
       this.sendT += dt;
       if (this.sendT >= 0.066) {
         this.sendT = 0;
-        this.send({ t: 'state', pos: g.player.pos.toArray(), yaw: g.player.yaw, hp: Math.max(0, g.prog.hp), maxHp: g.prog.maxHp, ready: this.ready, attacking: ['attack', 'heavy', 'cast'].includes(g.player.state) });
+        this.sendState();
+      }
+      if (!this.hasSnapshot && !this.syncWarned && now - this.openedAt > 5000) {
+        this.syncWarned = true;
+        this.changed('Connection opened but no player position arrived. Keep both games active; leave and rejoin if this persists.');
       }
       if (now - this.lastReceived > 20000) { this.leave('Friend stopped responding. Rejoin when both tabs are active.'); return; }
       this.model.root.visible = this.hasSnapshot && g.state !== 'title';
@@ -245,7 +296,7 @@ export class Multiplayer {
       }
     }
     const text = this.dueling ? now < this.countdownEnd ? `DUEL · ${Math.ceil((this.countdownEnd - now) / 1000)}` : `1v1 · ${Math.ceil((this.endAt - now) / 1000)}s · FRIEND ${Math.ceil(this.rival.hp)}/${this.rival.maxHp} HP`
-      : this.pending === 'incoming' ? 'DUEL INVITE · PAUSE → MULTIPLAYER' : this.connected ? 'FRIEND ONLINE · PAUSE → MULTIPLAYER' : '';
+      : this.pending === 'incoming' ? 'DUEL INVITE · PAUSE → MULTIPLAYER' : this.connected ? this.hasSnapshot ? `FRIEND · ${Math.round(g.player.pos.distanceTo(this.target))}m · PAUSE → MULTIPLAYER` : 'SYNCING FRIEND…' : '';
     if (text !== this.badgeText) { this.badgeText = text; this.badge.textContent = text; this.badge.classList.toggle('visible', !!text); }
   }
   panel() {
@@ -259,6 +310,10 @@ export class Multiplayer {
       button('JOIN ROOM', () => void this.open(input.value));
     } else {
       const code = document.createElement('div'); code.className = 'room-code'; code.textContent = this.code; body.appendChild(code);
+      const distance = document.createElement('p'); distance.className = 'hint-row';
+      distance.textContent = this.hasSnapshot ? `Friend: ${Math.round(this.game.player.pos.distanceTo(this.target))}m away. Purple slime and minimap diamond.` : 'Waiting for a live player position; a room code alone does not mean your friend is connected.';
+      body.appendChild(distance);
+      button('GO TO FRIEND', () => this.meetFriend(), !this.connected || !this.hasSnapshot || !this.remoteReady || !this.ready || this.dueling || !!this.pending);
       button('COPY INVITE LINK', () => {
         const u = new URL(location.origin + location.pathname); u.searchParams.set('room', this.code);
         navigator.clipboard?.writeText(u.href).then(() => this.changed('Invite copied. Send it to your friend.')).catch(() => this.changed('Share the room code above with your friend.'));
