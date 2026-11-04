@@ -1,3 +1,4 @@
+import { DungeonBuild } from './DungeonBuild';
 import { SKILLS, TRAITS, TRAIT_FUSIONS, SkillId, TraitId, xpForLevel, SKILL_ORDER } from './Data';
 import { events } from '../core/Events';
 
@@ -16,6 +17,7 @@ export interface SkillState { id: SkillId; level: number; xp: number; cooldown: 
 /** Player stats, level, acquired skills/traits, evolution logic. Emits events for the UI. */
 export class Progression {
   attributes: Record<Attribute, number> = { strength: 0, vitality: 0, intelligence: 0, spirit: 0, agility: 0, defense: 0 };
+  build = new DungeonBuild();
   allocationLocked = false;
   get statPoints() { return Math.max(0, 5 + (this.level - 1) * 3 - Object.values(this.attributes).reduce((a, b) => a + b, 0)); }
   allocate(id: Attribute) {
@@ -48,9 +50,9 @@ export class Progression {
 
   get maxHp() { return Math.round((this.baseHp + (this.level - 1) * 14 + this.attributes.vitality * 12) * (1 + this.sumMod('maxHp') / 100)); }
   get maxMp() { return Math.round((this.baseMp + (this.level - 1) * 8 + this.attributes.spirit * 8) + this.sumMod('maxMp')); }
-  get atk() { return (10 + (this.level - 1) * 2.2 + this.attributes.strength * 1.5) * (1 + this.sumMod('atk')); }
-  get magicAtk() { return (10 + (this.level - 1) * 2.2 + this.attributes.intelligence * 1.5) * (1 + this.sumMod('atk')); }
-  get def() { return Math.min(0.6, this.sumMod('def') + this.attributes.defense * 0.01); }
+  get atk() { return (10 + (this.level - 1) * 2.2 + this.attributes.strength * 1.5 + this.build.weapon + (this.build.bestWave && this.build.vocation === 'Striker' ? this.build.classBonus : 0)) * (1 + this.sumMod('atk')); }
+  get magicAtk() { return (10 + (this.level - 1) * 2.2 + this.attributes.intelligence * 1.5 + this.build.weapon + (this.build.bestWave && this.build.vocation === 'Arcanist' ? this.build.classBonus : 0)) * (1 + this.sumMod('atk')); }
+  get def() { return Math.min(0.6, this.sumMod('def') + this.attributes.defense * 0.01 + this.build.armor * .005 + (this.build.bestWave && this.build.vocation === 'Guardian' ? this.build.classBonus * .01 : 0)); }
   get critChance() { return Math.min(0.75, 0.08 + this.sumMod('crit') + this.attributes.agility * 0.003); }
   get regen() { return 0.2 + this.sumMod('regen'); }
   get mpRegen() { return 3 + this.sumMod('mpRegen') + this.attributes.spirit * 0.15; }

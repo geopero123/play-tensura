@@ -1,3 +1,4 @@
+import { vocations } from '../progression/DungeonBuild';
 import * as THREE from 'three';
 import { Multiplayer } from '../multiplayer/Multiplayer';
 import { Settings, DEBUG, IS_TOUCH } from './Settings';
@@ -112,6 +113,10 @@ export class Game {
   private sunQuestStep = -1;
   private sunProgress = 0;
   private sunDone = false;
+  private dungeon = false;
+  private dungeonRun = 0;
+  private pendingSpawns = 0;
+  private waveCleared = false;
   private trialWave = 0;
   private trialEnemies: Enemy[] = [];
   private trialActive = false;
@@ -213,7 +218,39 @@ export class Game {
     this.player = new Player(this.input, this.time, this.gcam, this.terrain, this.colliders, this.combat, this.skills, this.prog, this.fx, this.particles, this.renderer.post);
     this.renderer.scene.add(this.player.root);
     this.multiplayer = new Multiplayer(this, this.uiRoot);
-    this.menus.getMultiplayer = () => this.multiplayer.panel();
+    this.menus.getMultiplayer = () => {
+      const panel = this.multiplayer.panel();
+      const button = document.createElement('button');
+      button.className = 'room-button';
+      button.textContent = this.dungeon ? 'Dungeon · wave ' + this.trialWave + '/30' : 'ENTER TEMPEST DEPTHS · 30 WAVES';
+      button.disabled = this.trialActive || this.multiplayer.dueling || !!this.boss;
+      button.onclick = () => {
+        if (this.trialActive || this.multiplayer.dueling || this.boss) return;
+        this.menus.show('none'); this.resume();
+        this.dungeon = true; this.trialActive = true; this.trialWave = 0; this.dungeonRun++;
+        const hp = this.prog.hp, mp = this.prog.mp;
+        this.player.spawn(LANDMARKS.arena); this.prog.hp = hp; this.prog.mp = mp;
+        this.spawnTrialWave();
+      };
+      panel.appendChild(button);
+      const build = this.prog.build;
+      const description = document.createElement('p');
+      description.textContent = build.title + ' · ' + (build.evolved ? 'Awakened ' : '') + build.vocation + ' · Best wave ' + build.bestWave + ' · ' + build.coins + ' marks';
+      panel.appendChild(description);
+      const select = document.createElement('select');
+      select.ariaLabel = 'Dungeon class'; select.disabled = this.trialActive || this.multiplayer.dueling;
+      for (const name of vocations) select.add(new Option(name, name, false, build.vocation === name));
+      select.onchange = () => { build.vocation = vocations[select.selectedIndex]; this.menus.show('multiplayer'); };
+      panel.appendChild(select);
+      for (const slot of ['weapon', 'armor'] as const) {
+        const buy = document.createElement('button'); buy.className = 'room-button';
+        buy.textContent = 'Forge · ' + slot + ' +' + build[slot] + ' → +' + (build[slot] + 1) + ' · ' + build.price + ' marks';
+        buy.disabled = build.coins < build.price || this.multiplayer.dueling;
+        buy.onclick = () => { if (build.buy(slot)) this.menus.show('multiplayer'); };
+        panel.appendChild(buy);
+      }
+      return panel;
+    };
     this.multiplayer.onChange = () => { if (this.menus.screen === 'multiplayer') this.menus.show('multiplayer'); };
     this.player.onDeath = () => { if (this.multiplayer.dueling) this.multiplayer.defeated(); else this.onPlayerDeath(); };
     this.player.onPerfectDodge = () => this.notes.say('PERFECT DODGE');
@@ -436,14 +473,24 @@ export class Game {
       [{ kind: 'wisp', level: 3 }, { kind: 'wisp', level: 3 }, { kind: 'stormWolf', level: 3 }, { kind: 'stormWolf', level: 3 }, { kind: 'goblin', level: 4 }],
       [{ kind: 'warlord', level: 2 }, { kind: 'wolf', level: 4 }, { kind: 'wolf', level: 4 }, { kind: 'wisp', level: 4 }],
     ];
-    const wave = waves[this.trialWave];
+    if (!this.trialActive) return;
+    const number = this.trialWave + 1;
+    const dungeonKinds: EnemyKind[] = ['slime', 'goblin', 'wolf', 'wisp', 'stormWolf'];
+    const wave = this.dungeon ? Array.from({length: number === 30 ? 1 : Math.min(6, 2 + Math.floor(number / 4))}, (_, i) => ({
+      kind: number === 30 ? 'boss' as EnemyKind : number % 5 === 0 && i === 0 ? 'warlord' as EnemyKind : dungeonKinds[(number + i) % dungeonKinds.length],
+      level: number === 30 ? 60 : 1 + Math.floor(number * .85)
+    })) : waves[this.trialWave];
+    const run = this.dungeonRun;
     if (!wave) return;
+    this.pendingSpawns = wave.length; this.waveCleared = false;
     this.notes.say(`WAVE ${this.trialWave + 1}`);
     sfx('system');
     wave.forEach((w, i) => {
       const ang = (i / wave.length) * Math.PI * 2 + this.trialWave;
       const p = new THREE.Vector3(a.x + Math.cos(ang) * 16, 0, a.z + Math.sin(ang) * 16);
       this.after(0.25 * i, () => {
+        if (!this.trialActive || run !== this.dungeonRun) return;
+        this.pendingSpawns--;
         p.y = this.terrain.heightAt(p.x, p.z);
         this.fx.pillar(p, 0xffe3a3, 0.8, 14, 0.7);
         this.fx.shockwave(p, 0xfff0c0, 4, 0.5);
@@ -461,7 +508,21 @@ export class Game {
   private checkTrial() {
     if (!this.trialActive) return;
     this.trialEnemies = this.trialEnemies.filter((e) => e.alive);
-    if (this.trialEnemies.length) return;
+    if (this.trialEnemies.length || this.pendingSpawns || this.waveCleared) return;
+    this.waveCleared = true;
+    if (this.dungeon) {
+      const drop = this.prog.build.reward(this.trialWave);
+      this.notes.say('WAVE CLEAR · +' + (this.trialWave + 3) + ' MARKS' + drop);
+      this.prog.addXp(20 * this.trialWave);
+      if (this.trialWave < 30) {
+        const run = this.dungeonRun;
+        this.after(2.5, () => { if (run === this.dungeonRun && this.dungeon) this.spawnTrialWave(); });
+      } else {
+        this.dungeon = false; this.trialActive = false;
+        this.notes.areaTitle('TEMPEST DEPTHS CLEARED', '30 WAVES · RETURN ANYTIME');
+      }
+      return;
+    }
     if (this.trialWave < 3) { this.after(2.5, () => this.spawnTrialWave()); return; }
     // all three waves cleared
     this.trialActive = false;
@@ -925,6 +986,7 @@ export class Game {
     audio.duckMusic(1, 0.4);
   }
   toTitle() {
+    this.cancelDungeon();
     this.multiplayer?.leave();
     this.state = 'title';
     this.touch?.sync(false);
@@ -938,7 +1000,18 @@ export class Game {
     if (this.boss) { this.boss.dispose(); this.combat.unregister(this.boss); this.boss = null; }
     this.bossStorm = 0;
   }
+  private cancelDungeon() {
+    if (!this.dungeon) return;
+    this.dungeonRun++; this.dungeon = false; this.trialActive = false;
+    for (const enemy of this.trialEnemies) {
+      enemy.dispose(); this.combat.unregister(enemy);
+      const index = this.enemies.indexOf(enemy);
+      if (index >= 0) this.enemies.splice(index, 1);
+    }
+    this.trialEnemies = [];
+  }
   private onPlayerDeath() {
+    this.cancelDungeon();
     this.state = 'dead';
     this.renderer.post.u.uDesat.value = 0;
     this.after(1.8, () => { if (this.state === 'dead') { this.menus.show('death'); this.input.releaseLock(); } });
