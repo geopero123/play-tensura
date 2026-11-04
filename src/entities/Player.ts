@@ -181,6 +181,7 @@ export class Player implements Combatant, SkillContext {
   // ---------------- hit reception ----------------
   takeHit(hit: HitInfo): boolean {
     if (!this.alive) return false;
+    if (this.combat.duelTarget !== null && hit.source?.id !== this.combat.duelTarget) return false;
     if (this.invulnerable && !hit.unblockable) {
       if (this.perfectWindow) this.perfectDodge();
       return false;

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Terrain, WORLD_HALF, WORLD_SIZE } from '../world/Terrain';
 
-export interface MinimapBlip { x: number; z: number; kind: 'enemy' | 'elite' | 'boss' | 'npc' | 'quest' | 'landmark' | 'essence'; label?: string }
+export interface MinimapBlip { x: number; z: number; kind: 'friend' | 'enemy' | 'elite' | 'boss' | 'npc' | 'quest' | 'landmark' | 'essence'; label?: string }
 export interface MinimapState {
   /** player world position */
   x: number; z: number;
@@ -121,6 +121,7 @@ export class Minimap {
       ctx.translate(dx, dz);
       ctx.rotate(-rot); // keep glyphs upright
       switch (b.kind) {
+        case 'friend': this.diamond(ctx, 7, '#c39bff', '#fff'); break;
         case 'enemy': this.dot(ctx, 5, '#ff5a6a', '#2a0a10'); break;
         case 'elite': this.diamond(ctx, 7, '#ff9a3c', '#2a1000'); break;
         case 'boss': this.diamond(ctx, 9 + pulse * 2, '#ff3a4a', '#fff'); break;

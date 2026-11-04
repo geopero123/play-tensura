@@ -68,3 +68,25 @@ Hidden console commands (open DevTools with F12 once the title screen is up): `c
 
 Set `localStorage['tr-debug'] = '1'` (or add `?debug` to the URL) to enable mouse input without pointer lock and a per-system profiler at `window.__game.profile`.
 # play-tensura
+
+## Phone controls, character builds and multiplayer
+
+- Android / iPhone: floating left-thumb joystick, right-thumb look, hold ATK to chain attacks, jump, heavy, dodge/sprint, target lock, skills, pause and a dedicated **STATS** button. Portrait and landscape layouts respect safe areas. Menus scroll on short screens. Landscape is recommended.
+- **Pause → Stats** (or **P**): spend 5 starting points and 3 more per level across Strength, Vitality, Intelligence, Spirit, Agility and Defense. Melee and spell power scale separately. The screen explains each effect and shows derived values. Free resets preserve current resources and clamp reduced caps. Builds last for the current game session, matching the existing in-memory progression; refreshing resets progression.
+- **Pause → Multiplayer → Create Room**: share the 8-character room code or copied invite link. Your friend starts the game, completes/closes dialogue, then opens the same menu and joins. Both players must keep their tabs open. Purple slimes and minimap diamonds identify friends. Two players per room.
+- **Challenge to 1v1 → Accept**: both players enter the training area with full HP/MP and refreshed cooldowns. A 3-second countdown precedes combat. Existing skills, builds, dodges, projectiles and melee apply. Predator cannot devour players. Points and skill XP are locked during duels. Leaving the 32-unit arena, pausing, switching apps or disconnecting ends the duel; the two-minute limit draws. Original positions, resources and cooldowns are restored. No PvP XP is awarded.
+
+### Multiplayer scope and hosting
+
+This release provides **shared exploration and casual 1v1**, not synchronized PvE: enemy simulation, quests, world objects and progression remain local to each browser. There is no account system, matchmaking, persistent room server, ranking or anti-cheat authority. Players own their character state; incoming messages and hit ranges are checked, but clients are not a trusted competitive server.
+
+PeerJS uses its public PeerServer for signaling and WebRTC data channels for gameplay (no camera/microphone permission). The signaling service is an external availability dependency. Default ICE connectivity may fail behind restrictive carrier networks/NAT; a production TURN service is needed for reliable coverage across these networks. Failed connections time out with a retry message. An optional self-hosted PeerServer/TURN setup can replace the defaults later.
+
+### Validation
+
+```bash
+npm test       # production modules with a deterministic fake signaling transport
+npm run build  # TypeScript and production assets
+```
+
+Tests cover stat spending and limits, level rewards, duel stat lock, room capacity, challenge consent, countdown, damage validation, wins, rematches and disconnect restoration. Transport tests do not establish real cross-network WebRTC reliability. Browser UI checks can run independently of WebGL; rendered gameplay still requires a browser/device with WebGL enabled.

@@ -1,12 +1,13 @@
 import { Settings, Quality } from '../core/Settings';
 import { ICONS, PORTRAIT_SVG } from './Icons';
 import { SKILLS, TRAITS, SKILL_ORDER } from '../progression/Data';
+import { ATTRIBUTES, type Attribute } from '../progression/Progression';
 import type { Progression } from '../progression/Progression';
 import { sfx } from '../audio/Audio';
 
 function h(cls: string, html = '') { const e = document.createElement('div'); e.className = cls; e.innerHTML = html; return e; }
 
-export type MenuScreen = 'none' | 'title' | 'characters' | 'settings' | 'skills' | 'pause' | 'death';
+export type MenuScreen = 'none' | 'title' | 'characters' | 'settings' | 'skills' | 'pause' | 'death' | 'stats' | 'multiplayer';
 
 export class Menus {
   root: HTMLElement;
@@ -26,6 +27,7 @@ export class Menus {
   onQuit: () => void = () => {};
   onRetry: () => void = () => {};
   getProgression: () => Progression | null = () => null;
+  getMultiplayer: () => HTMLElement = () => h('hint-row', 'Start your adventure to open a room.');
   inGame = false;
 
   constructor(root: HTMLElement, settings: Settings) {
@@ -54,7 +56,7 @@ export class Menus {
     // pause
     this.pause = h('menu pause');
     this.pause.innerHTML = `<div class="title-bg"></div><div class="pause-title">PAUSED</div>
-      <div class="menu-list"><button class="menu-btn" data-a="resume">RESUME</button><button class="menu-btn" data-a="skills">SKILLS</button><button class="menu-btn" data-a="settings">SETTINGS</button><button class="menu-btn danger" data-a="quit">TITLE SCREEN</button></div>
+      <div class="menu-list"><button class="menu-btn" data-a="resume">RESUME</button><button class="menu-btn" data-a="stats">STATS</button><button class="menu-btn" data-a="multiplayer">MULTIPLAYER · 1v1</button><button class="menu-btn" data-a="skills">SKILLS</button><button class="menu-btn" data-a="settings">SETTINGS</button><button class="menu-btn danger" data-a="quit">TITLE SCREEN</button></div>
       <div class="panel glass" style="width:min(720px,80vw);margin-top:26px;padding:18px 26px;"><div class="controls">
         <div><span>Move</span><b>W A S D</b></div><div><span>Camera</span><b>MOUSE</b></div>
         <div><span>Attack combo</span><b>LEFT CLICK</b></div><div><span>Heavy / launcher</span><b>RIGHT CLICK</b></div>
@@ -95,6 +97,8 @@ export class Menus {
       case 'play': this.show('none'); this.onPlay(); break;
       case 'characters': this.from = 'title'; this.show('characters'); break;
       case 'settings': this.from = this.screen === 'pause' ? 'pause' : 'title'; this.show('settings'); break;
+      case 'stats': this.from = 'pause'; this.show('stats'); break;
+      case 'multiplayer': this.from = 'pause'; this.show('multiplayer'); break;
       case 'skills': this.from = 'pause'; this.show('skills'); break;
       case 'resume': this.show('none'); this.onResume(); break;
       case 'quit': this.show('title'); this.onQuit(); break;
@@ -108,21 +112,24 @@ export class Menus {
     this.title.classList.toggle('visible', s === 'title');
     this.pause.classList.toggle('visible', s === 'pause');
     this.death.classList.toggle('visible', s === 'death');
-    this.panelHost.classList.toggle('visible', s === 'characters' || s === 'settings' || s === 'skills');
+    this.panelHost.classList.toggle('visible', s === 'characters' || s === 'settings' || s === 'skills' || s === 'stats' || s === 'multiplayer');
     this.panelHost.innerHTML = '';
     if (s === 'settings') this.panelHost.appendChild(this.buildSettings());
     if (s === 'characters') this.panelHost.appendChild(this.buildCharacters());
+    if (s === 'stats') this.panelHost.appendChild(this.buildStats());
+    if (s === 'multiplayer') this.panelHost.appendChild(this.panel('MULTIPLAYER', 'PRIVATE ROOMS · FRIENDLY DUELS', this.getMultiplayer()));
     if (s === 'skills') this.panelHost.appendChild(this.buildSkills());
   }
 
   /** ESC / back handling; returns true if consumed */
   back(): boolean {
-    if (this.screen === 'settings' || this.screen === 'characters' || this.screen === 'skills') { sfx('uiBack'); this.show(this.from); return true; }
+    if (['settings', 'characters', 'skills', 'stats', 'multiplayer'].includes(this.screen)) { sfx('uiBack'); this.show(this.from); return true; }
     if (this.screen === 'pause') { sfx('uiBack'); this.show('none'); this.onResume(); return true; }
     return false;
   }
 
   openPause() { this.from = 'pause'; this.show('pause'); }
+  openStats() { this.from = 'pause'; this.show('stats'); }
   openSkills() { this.from = 'pause'; this.show('skills'); }
 
   private panel(title: string, sub: string, body: HTMLElement) {
@@ -188,6 +195,26 @@ export class Menus {
     body.appendChild(toggle('INVERT Y AXIS', 'invertY'));
     body.appendChild(toggle('DAMAGE NUMBERS', 'showDamage'));
     return this.panel('SETTINGS', 'GRAPHICS · CONTROLS · AUDIO', body);
+  }
+
+  private buildStats() {
+    const p = this.getProgression();
+    const body = h('attribute-panel');
+    if (!p) return this.panel('STATS', 'START YOUR ADVENTURE FIRST', body);
+    body.appendChild(h('attribute-summary', `<b>${p.statPoints}</b> POINTS AVAILABLE <small>5 starting points · +3 each level · Level ${p.level}</small>`));
+    for (const [id, def] of Object.entries(ATTRIBUTES)) {
+      const row = h('attribute-row');
+      row.innerHTML = `<div><b>${def.name}</b><small>${def.desc}</small></div><strong>${p.attributes[id as Attribute]}</strong>`;
+      const b = document.createElement('button'); b.textContent = '+'; b.setAttribute('aria-label', 'Increase ' + def.name);
+      b.disabled = p.statPoints < 1 || p.allocationLocked;
+      b.onclick = () => { if (p.allocate(id as Attribute)) { sfx('ui'); this.show('stats'); } };
+      row.appendChild(b); body.appendChild(row);
+    }
+    body.appendChild(h('derived-stats', `HP <b>${p.maxHp}</b> · MP <b>${p.maxMp}</b> · Melee <b>${p.atk.toFixed(1)}</b> · Magic <b>${p.magicAtk.toFixed(1)}</b><br>Resistance ${(p.def * 100).toFixed(0)}% · Critical ${(p.critChance * 100).toFixed(1)}% · MP regen ${p.mpRegen.toFixed(2)}/s`));
+    const reset = document.createElement('button'); reset.className = 'room-button'; reset.textContent = 'RESET POINTS · FREE'; reset.disabled = p.allocationLocked;
+    reset.onclick = () => { p.resetAttributes(); this.show('stats'); };
+    body.appendChild(reset);
+    return this.panel('CHARACTER STATS', 'BUILD YOUR OWN SLIME', body);
   }
 
   private buildCharacters() {

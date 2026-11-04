@@ -1,10 +1,35 @@
 import { SKILLS, TRAITS, TRAIT_FUSIONS, SkillId, TraitId, xpForLevel, SKILL_ORDER } from './Data';
 import { events } from '../core/Events';
 
+export const ATTRIBUTES = {
+  strength: { name: 'Strength', desc: '+1.5 melee attack per point' },
+  vitality: { name: 'Vitality', desc: '+12 maximum HP per point' },
+  intelligence: { name: 'Intelligence', desc: '+1.5 spell power per point' },
+  spirit: { name: 'Spirit', desc: '+8 maximum MP and +0.15 MP regeneration per point' },
+  agility: { name: 'Agility', desc: '+1% speed (30% cap), +0.3% critical chance per point' },
+  defense: { name: 'Defense', desc: '+1% damage resistance per point (60% total cap)' },
+} as const;
+export type Attribute = keyof typeof ATTRIBUTES;
+
 export interface SkillState { id: SkillId; level: number; xp: number; cooldown: number }
 
 /** Player stats, level, acquired skills/traits, evolution logic. Emits events for the UI. */
 export class Progression {
+  attributes: Record<Attribute, number> = { strength: 0, vitality: 0, intelligence: 0, spirit: 0, agility: 0, defense: 0 };
+  allocationLocked = false;
+  get statPoints() { return Math.max(0, 5 + (this.level - 1) * 3 - Object.values(this.attributes).reduce((a, b) => a + b, 0)); }
+  allocate(id: Attribute) {
+    if (this.allocationLocked || !Object.hasOwn(ATTRIBUTES, id) || this.statPoints < 1) return false;
+    this.attributes[id]++;
+    // Raising a cap preserves current HP/MP; points cannot be used as a healing potion.
+    events.emit('statsChanged', id);
+    return true;
+  }
+  resetAttributes() {
+    if (this.allocationLocked) return;
+    for (const id of Object.keys(ATTRIBUTES) as Attribute[]) this.attributes[id] = 0;
+    this.hp = Math.min(this.hp, this.maxHp); this.mp = Math.min(this.mp, this.maxMp);
+  }
   level = 1;
   xp = 0;
   hp = 100;
@@ -21,15 +46,16 @@ export class Progression {
     this.acquireSkill('predator', true);
   }
 
-  get maxHp() { return Math.round((this.baseHp + (this.level - 1) * 14) * (1 + this.sumMod('maxHp') / 100)); }
-  get maxMp() { return Math.round((this.baseMp + (this.level - 1) * 8) + this.sumMod('maxMp')); }
-  get atk() { return (10 + (this.level - 1) * 2.2) * (1 + this.sumMod('atk')); }
-  get def() { return Math.min(0.6, this.sumMod('def')); }
-  get critChance() { return 0.08 + this.sumMod('crit'); }
+  get maxHp() { return Math.round((this.baseHp + (this.level - 1) * 14 + this.attributes.vitality * 12) * (1 + this.sumMod('maxHp') / 100)); }
+  get maxMp() { return Math.round((this.baseMp + (this.level - 1) * 8 + this.attributes.spirit * 8) + this.sumMod('maxMp')); }
+  get atk() { return (10 + (this.level - 1) * 2.2 + this.attributes.strength * 1.5) * (1 + this.sumMod('atk')); }
+  get magicAtk() { return (10 + (this.level - 1) * 2.2 + this.attributes.intelligence * 1.5) * (1 + this.sumMod('atk')); }
+  get def() { return Math.min(0.6, this.sumMod('def') + this.attributes.defense * 0.01); }
+  get critChance() { return Math.min(0.75, 0.08 + this.sumMod('crit') + this.attributes.agility * 0.003); }
   get regen() { return 0.2 + this.sumMod('regen'); }
-  get mpRegen() { return 3 + this.sumMod('mpRegen'); }
+  get mpRegen() { return 3 + this.sumMod('mpRegen') + this.attributes.spirit * 0.15; }
   get fireRes() { return Math.min(1, this.sumMod('fireRes')); }
-  get speedMod() { return 1 + this.sumMod('speed'); }
+  get speedMod() { return 1 + this.sumMod('speed') + Math.min(0.3, this.attributes.agility * 0.01); }
   /** 0..1 visible power for the aura */
   get power() { return Math.min(1, (this.level - 1) / 12 + this.skills.size * 0.06 + this.traits.size * 0.04); }
 
@@ -88,6 +114,7 @@ export class Progression {
 
   /** skill usage XP; returns true if the skill evolved */
   addSkillXp(id: SkillId, amount = 1) {
+    if (this.allocationLocked) return false;
     const s = this.skills.get(id);
     if (!s) return false;
     const def = SKILLS[id];
@@ -159,7 +186,7 @@ export class Progression {
   }
 
   serialize() {
-    return { level: this.level, xp: this.xp, skills: [...this.skills.values()], traits: [...this.traits], stacks: [...this.traitStacks], absorbed: [...this.absorbed], kills: this.kills };
+    return { attributes: { ...this.attributes }, level: this.level, xp: this.xp, skills: [...this.skills.values()], traits: [...this.traits], stacks: [...this.traitStacks], absorbed: [...this.absorbed], kills: this.kills };
   }
 
   orderedSkills() { return SKILL_ORDER; }

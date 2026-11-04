@@ -25,6 +25,7 @@ export class TouchControls {
   private lookLast = { x: 0, y: 0 };
   private held = new Map<HTMLElement, () => void>();
   private active = false;
+  private nextAttack = 0;
   private rotate: HTMLElement;
   private rotateDismissed = false;
 
@@ -42,6 +43,7 @@ export class TouchControls {
       <button class="tbtn t-dodge" data-key="ShiftLeft" aria-label="Dodge (hold to sprint)"><span>DODGE</span></button>
       <button class="tbtn t-lock" data-key="Tab" aria-label="Lock target"><span>LOCK</span></button>
       <button class="tbtn t-small t-pause" data-key="Escape" aria-label="Pause"><span>II</span></button>
+      <button class="tbtn t-small t-stats" data-key="KeyP" aria-label="Character stats"><span>STATS</span></button>
       <button class="tbtn t-small t-skills" data-key="KeyK" aria-label="Skills"><span>SK</span></button>`;
     uiRoot.appendChild(this.root);
     this.stickBase = this.root.querySelector('.tstick')!;
@@ -97,6 +99,9 @@ export class TouchControls {
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('dblclick', (e) => e.preventDefault());
 
+    window.addEventListener('blur', () => this.releaseAll());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.releaseAll(); });
+    window.visualViewport?.addEventListener('resize', () => this.layout());
     window.addEventListener('resize', () => this.layout());
     window.addEventListener('orientationchange', () => setTimeout(() => this.layout(), 200));
     this.layout();
@@ -116,6 +121,7 @@ export class TouchControls {
       e.preventDefault();
       e.stopPropagation();
       if (touchId !== null) return;
+      if (!this.active && this.root.contains(el)) return;
       touchId = e.changedTouches[0].identifier;
       el.classList.add('down');
       this.held.set(el, release);
@@ -204,7 +210,22 @@ export class TouchControls {
     this.stickBase.classList.remove('on');
   }
 
+  private releaseAll() {
+    for (const release of [...this.held.values()]) release();
+    this.resetStick(); this.lookId = null;
+    this.input.keys.clear(); this.input.pressed.clear(); this.input.released.clear();
+    this.input.mouseButtons.clear(); this.input.mousePressed.clear();
+    this.input.mouseDX = this.input.mouseDY = 0;
+  }
+
   /** called every frame by the game: controls are live only during free play */
+  poll() {
+    // Holding ATK chains attacks while the other thumb moves or aims.
+    if (this.active && this.input.mouseButtons.has(0) && performance.now() >= this.nextAttack) {
+      this.input.mousePressed.add(0); this.nextAttack = performance.now() + 280;
+    }
+  }
+
   sync(playing: boolean) {
     if (playing !== this.active) {
       this.active = playing;
@@ -234,5 +255,6 @@ export class TouchControls {
     const s = Math.max(0.55, Math.min(0.82, Math.min(w / 1000, h / 480)));
     document.documentElement.style.setProperty('--tui', String(s));
     this.rotate.classList.toggle('visible', h > w && !this.rotateDismissed);
+    document.documentElement.classList.toggle('portrait-mode', h > w);
   }
 }
