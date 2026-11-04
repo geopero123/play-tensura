@@ -34,7 +34,8 @@ export class Input {
     });
     window.addEventListener('blur', () => {
       this.keys.clear();
-      this.mouseButtons.clear();
+      this.mouseButtons.clear(); this.mousePressed.clear(); this.pressed.clear(); this.released.clear();
+      this.stick.x = this.stick.y = 0; this.mouseDX = this.mouseDY = 0;
     });
     document.addEventListener('mousemove', (e) => {
       if (!this.locked && !this.allowUnlocked) return;

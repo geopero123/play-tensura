@@ -33,6 +33,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 /** Implements the seven spells with layered anime presentation. Every spell scales across five evolution tiers. */
 export class SkillSystem {
   private list: Active[] = [];
+  private spellRoot = new THREE.Group();
   private circles: MagicCircle[] = [];
   /** requests read by the game each frame */
   stormRequest = 0;
@@ -69,7 +70,8 @@ export class SkillSystem {
   ) {
     this.ultLight = new THREE.PointLight(0xff8040, 0, 60, 1.2);
     this.castLight = new THREE.PointLight(0x7fd4ff, 0, 14, 1.5);
-    scene.add(this.ultLight, this.castLight);
+    scene.add(this.spellRoot);
+    this.spellRoot.add(this.ultLight, this.castLight);
   }
 
   private h(x: number, z: number) { return this.terrain.heightAt(x, z); }
@@ -77,9 +79,31 @@ export class SkillSystem {
   private circle(opts: ConstructorParameters<typeof MagicCircle>[0], pos: THREE.Vector3, parent?: THREE.Object3D) {
     const c = new MagicCircle(opts);
     c.group.position.copy(pos);
-    (parent ?? this.scene).add(c.group);
+    (parent ?? this.spellRoot).add(c.group);
     this.circles.push(c);
     return c;
+  }
+
+  /** Cancel a session's effects and delayed damage when entering/leaving a duel. */
+  clear() {
+    this.list.length = 0;
+    for (const c of this.circles) c.dispose();
+    this.circles.length = 0;
+    for (const child of [...this.spellRoot.children]) {
+      if (child === this.castLight || child === this.ultLight) continue;
+      child.traverse(o => {
+        const mesh = o as THREE.Mesh;
+        mesh.geometry?.dispose();
+        if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.dispose());
+        else mesh.material?.dispose();
+      });
+      this.spellRoot.remove(child);
+    }
+    this.castLight.intensity = this.ultLight.intensity = 0;
+    this.ultActive = this.ultHold = false; this.ultFocus = null;
+    this.stormRequest = this.windRequest = this.sunRequest = this.nightRequest = 0;
+    this.tint.set(1, 1, 1); this.onBars?.(false); this.onUltEnd?.();
+    this.gcam.mode = 'explore'; this.post.speedLinesTarget = 0;
   }
 
   canCast(id: SkillId) {
@@ -112,7 +136,7 @@ export class SkillSystem {
     return castTime;
   }
 
-  private dmg(mult: number) { return this.prog.atk * mult; }
+  private dmg(mult: number) { return this.prog.magicAtk * mult; }
   private spec(mult: number, element: AttackSpec['element'], radius: number, extra: Partial<AttackSpec> = {}): AttackSpec {
     return { damage: this.dmg(mult), type: 'spell', element, radius, critChance: this.prog.critChance, hitstop: 0.04, stagger: 0.35, knockback: 3, ...extra };
   }
@@ -182,7 +206,7 @@ export class SkillSystem {
     g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
     g.rotateZ(rand(-0.4, 0.4));
     g.renderOrder = 12;
-    this.scene.add(g);
+    this.spellRoot.add(g);
     const hitSet = new Set<number>();
     const speed = 30;
     let t = -delay;
@@ -232,7 +256,7 @@ export class SkillSystem {
       const gy = this.h(g.position.x, g.position.z);
       if (g.position.y < gy + 0.1) g.position.y = gy + 0.1;
       const alive = t < life;
-      if (!alive) { this.scene.remove(g); geo.dispose(); }
+      if (!alive) { this.spellRoot.remove(g); geo.dispose(); }
       return alive;
     } });
   }
@@ -259,7 +283,7 @@ export class SkillSystem {
       eclipse.position.copy(target).setY(target.y + 2.5);
       eclipse.scale.setScalar(radius * 0.9);
       eclipse.renderOrder = 11;
-      this.scene.add(eclipse);
+      this.spellRoot.add(eclipse);
     }
     let t = 0;
     this.list.push({ update: (dt) => {
@@ -268,7 +292,7 @@ export class SkillSystem {
       if (!fired && this.time.elapsed >= fireAt) {
         fired = true;
         c.dismiss(0.2);
-        if (eclipse) { this.scene.remove(eclipse); eclipse.geometry.dispose(); }
+        if (eclipse) { this.spellRoot.remove(eclipse); eclipse.geometry.dispose(); }
         this.prog.addSkillXp('blackFlame');
         this.igniteBlackFlame(ctx, target, radius, lvl);
       }
@@ -336,7 +360,7 @@ export class SkillSystem {
     // lingering zone
     const light = new THREE.PointLight(color, 14, radius * 4, 1.4);
     light.position.copy(target).add(new THREE.Vector3(0, 1.5, 0));
-    this.scene.add(light);
+    this.spellRoot.add(light);
     this.fx.groundMark(target, 0x1a0525, radius * 1.2, 5.5);
     const dur = T(lvl, [4, 5, 6, 7, 8]);
     let t = 0, tick = 0;
@@ -347,7 +371,7 @@ export class SkillSystem {
     if (lvl >= 5) {
       halo = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.9, 0.12, 6, 48), createGlowMaterial(edge, 0.8));
       halo.rotation.x = Math.PI / 2; halo.position.copy(center).setY(center.y + 2.2); halo.renderOrder = 12;
-      this.scene.add(halo);
+      this.spellRoot.add(halo);
     }
     this.list.push({ update: (dt) => {
       t += dt; tick += dt;
@@ -367,7 +391,7 @@ export class SkillSystem {
       if (Math.random() < 0.5) this.particles.emit({ pos: { x: center.x + rand(-radius, radius) * 0.7, y: center.y + 0.5, z: center.z + rand(-radius, radius) * 0.7 }, count: 1, velUp: 2, life: 0.8, size: 0.08, color: [edge, 0xffffff], shape: Shape.SPARK, stretch: 0.8, gravity: -1 });
       if (Math.random() < 0.25) this.particles.emit({ pos: { x: center.x, y: center.y + 1.5, z: center.z }, count: 1, spread: radius * 0.5, velUp: 1.5, life: 2, size: 1.2, sizeEnd: 2.5, color: [0x0a0212], alpha: 0.5, shape: Shape.SMOKE, additive: false, rotSpeed: 1 });
       if (tick > 0.5) { tick = 0; this.combat.hit(ctx.combatant, 'enemy', center.clone().setY(center.y + 0.8), ctx.facing, tickSpec); }
-      if (t >= dur) { this.scene.remove(light); if (halo) { this.scene.remove(halo); halo.geometry.dispose(); } return false; }
+      if (t >= dur) { this.spellRoot.remove(light); if (halo) { this.spellRoot.remove(halo); halo.geometry.dispose(); } return false; }
       return true;
     } });
   }
@@ -407,7 +431,7 @@ export class SkillSystem {
       g.add(ring);
     }
     g.position.copy(center); g.scale.setScalar(0.01); g.renderOrder = 11;
-    this.scene.add(g);
+    this.spellRoot.add(g);
     sfx('wind', 0.8);
     let t = 0, tick = 0;
     const tickSpec = this.spec(0.4, 'wind', radius, { knockback: 0, stagger: 0.25, hitstop: 0, skillId: 'windCutter' });
@@ -420,7 +444,7 @@ export class SkillSystem {
       for (let i = 0; i < 3; i++) { const a = rand(0, Math.PI * 2), r = rand(0.5, radius); this.particles.emit({ pos: { x: center.x + Math.cos(a) * r, y: center.y + rand(0, 3), z: center.z + Math.sin(a) * r }, count: 1, life: 0.5, size: 0.1, color: [color, 0xffffff], shape: Shape.SPARK, stretch: 1.2, orbit: 12, vel: { x: 0, y: 3, z: 0 } }); }
       if (tick > 0.3) { tick = 0; this.combat.hit(ctx.combatant, 'enemy', center.clone().setY(center.y + 1), ctx.facing, tickSpec); }
       if (t >= dur) {
-        this.scene.remove(g); g.children.forEach((c) => (c as THREE.Mesh).geometry.dispose());
+        this.spellRoot.remove(g); g.children.forEach((c) => (c as THREE.Mesh).geometry.dispose());
         this.fx.shockwave(center, 0xffffff, radius * 2, 0.5);
         this.combat.hit(ctx.combatant, 'enemy', center.clone().setY(center.y + 1), ctx.facing, this.spec(1.8, 'wind', radius, { knockback: 6, launch: 8, stagger: 0.6, skillId: 'windCutter' }));
         sfx('windHit', 1);
@@ -440,7 +464,7 @@ export class SkillSystem {
     const startDir = ctx.facing.clone().applyAxisAngle(UP, ang);
     const pos = ctx.pos.clone().add(new THREE.Vector3(0, 0.6 + rand(0, 0.8), 0)).addScaledVector(startDir, 0.5).addScaledVector(new THREE.Vector3(-startDir.z, 0, startDir.x), side * rand(0.3, 0.9));
     m.position.copy(pos);
-    this.scene.add(m);
+    this.spellRoot.add(m);
     m.visible = false;
     const dir = startDir.clone();
     let t = -delay;
@@ -465,7 +489,7 @@ export class SkillSystem {
           const hits = this.combat.hit(ctx.combatant, 'enemy', m.position, dir, spec, hitSet);
           if (hits.length) {
             for (const hh of hits) { this.fx.slash(hh.pos.clone().setY(hh.pos.y + hh.height * 0.5), dir, color, 1.2, 0.18, { tilt: rand(-1, 1) }); sfx('windHit', 0.7); }
-            if (!pierce) { this.scene.remove(m); geo.dispose(); return false; }
+            if (!pierce) { this.spellRoot.remove(m); geo.dispose(); return false; }
             // tier 4+: pass through and seek the next enemy
             cur = this.nearest(m.position, 18, hitSet)[0] ?? null;
             life = Math.min(life, 0.9);
@@ -480,7 +504,7 @@ export class SkillSystem {
       const gy = this.h(m.position.x, m.position.z) + 0.3;
       if (m.position.y < gy) m.position.y = gy;
       this.particles.emit({ pos: m.position, count: 1, life: 0.25, size: 0.1, color: [color, 0xffffff], alpha: 0.6, shape: Shape.SPARK, stretch: 1, vel: { x: -dir.x * 3, y: 0, z: -dir.z * 3 } });
-      if (life > 1.6) { this.scene.remove(m); geo.dispose(); return false; }
+      if (life > 1.6) { this.spellRoot.remove(m); geo.dispose(); return false; }
       return true;
     } });
   }
@@ -618,10 +642,10 @@ export class SkillSystem {
     vortex.position.copy(center);
     vortex.scale.setScalar(0.01);
     vortex.renderOrder = 11;
-    this.scene.add(vortex);
+    this.spellRoot.add(vortex);
     const light = new THREE.PointLight(color, 10, radius * 4, 1.5);
     light.position.copy(center).add(new THREE.Vector3(0, 1.5, 0));
-    this.scene.add(light);
+    this.spellRoot.add(light);
     const dur = 1.3;
     let t = 0, tick = 0, done = false;
     const tickSpec = this.spec(T(lvl, [0.35, 0.35, 0.35, 0.8, 1.0]), 'dark', radius, { knockback: 0, stagger: 0.2, hitstop: 0, skillId: 'predator' });
@@ -663,7 +687,7 @@ export class SkillSystem {
         }
         else this.fx.burst(center.clone().setY(center.y + 0.8), dark, radius * 0.6, 0.3, false);
         this.fx.shockwave(center, color, radius * 1.8, 0.4);
-        this.scene.remove(vortex, light);
+        this.spellRoot.remove(vortex, light);
         torus.geometry.dispose(); funnel.geometry.dispose();
         return false;
       }
@@ -692,7 +716,7 @@ export class SkillSystem {
     let t = 0, phase = 0, fallT = 0;
     const meteorMesh = this.buildMeteor(T(lvl, [2.6, 2.6, 3.4, 3.6, 4.2]));
     meteorMesh.visible = false;
-    this.scene.add(meteorMesh);
+    this.spellRoot.add(meteorMesh);
     const start = target.clone().add(new THREE.Vector3(-22, 70, -30));
     const fallDur = 1.05;
     const mini: { m: THREE.Group; from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
@@ -731,7 +755,7 @@ export class SkillSystem {
           const a = rand(0, Math.PI * 2), r = rand(4, lvl >= 4 ? 12 : 9);
           const to = new THREE.Vector3(target.x + Math.cos(a) * r, 0, target.z + Math.sin(a) * r); to.y = this.h(to.x, to.z);
           const m = this.buildMeteor(0.9);
-          this.scene.add(m);
+          this.spellRoot.add(m);
           mini.push({ m, from: to.clone().add(new THREE.Vector3(-8, 40, -10)), to, t: 0 });
           miniSpawned++;
         }
@@ -761,7 +785,7 @@ export class SkillSystem {
         if (k >= 1) {
           phase = 2;
           this.impact(ctx, target, lvl);
-          this.scene.remove(meteorMesh);
+          this.spellRoot.remove(meteorMesh);
           sky.dismiss(0.6); tgtCircle.dismiss(0.3);
           this.post.speedLinesTarget = 0; this.post.radialTarget = 0;
         }
@@ -786,7 +810,7 @@ export class SkillSystem {
           this.fx.explosion(mm.to, orange, red, 3.5, this.combat.camera);
           this.gcam.addTrauma(0.3);
           this.combat.hit(ctx.combatant, 'enemy', mm.to.clone().setY(mm.to.y + 0.8), ctx.facing, this.spec(3, 'meteor', 4, { knockback: 6, launch: 5, stagger: 0.6, hitstop: 0.04, skillId: 'meteor' }));
-          this.scene.remove(mm.m);
+          this.spellRoot.remove(mm.m);
           mini.splice(i, 1);
         }
       }
@@ -856,7 +880,7 @@ export class SkillSystem {
     // lingering firestorm
     const light = new THREE.PointLight(orange, 30, radius * 4, 1.2);
     light.position.copy(p).add(new THREE.Vector3(0, 3, 0));
-    this.scene.add(light);
+    this.spellRoot.add(light);
     let t = 0, tick = 0;
     const dur = T(lvl, [4.5, 4.5, 7, 7.5, 9]);
     const tickSpec = this.spec(0.9, 'fire', radius * 0.8, { knockback: 1, stagger: 0.2, hitstop: 0, skillId: 'meteor' });
@@ -870,7 +894,7 @@ export class SkillSystem {
       }
       if (Math.random() < 0.4) this.particles.emit({ pos: { x: p.x + rand(-radius, radius) * 0.6, y: p.y + 1, z: p.z + rand(-radius, radius) * 0.6 }, count: 1, velUp: 2, life: 2.5, size: 1.5, sizeEnd: 3, color: [0x1a0a08], alpha: 0.5, shape: Shape.SMOKE, additive: false, rotSpeed: 1 });
       if (tick > 0.5) { tick = 0; this.combat.hit(ctx.combatant, 'enemy', p.clone().setY(p.y + 0.8), ctx.facing, tickSpec); }
-      if (t >= dur) { this.scene.remove(light); return false; }
+      if (t >= dur) { this.spellRoot.remove(light); return false; }
       return true;
     } });
   }

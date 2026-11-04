@@ -68,6 +68,7 @@ export const newId = () => nextId++;
 
 export class Combat {
   combatants: Combatant[] = [];
+  duelTarget: number | null = null;
   private time: Time;
   private fx: Effects;
   camera: THREE.Camera;
@@ -85,13 +86,14 @@ export class Combat {
   register(c: Combatant) { this.combatants.push(c); }
   unregister(c: Combatant) { const i = this.combatants.indexOf(c); if (i >= 0) this.combatants.splice(i, 1); }
 
-  enemies() { return this.combatants.filter((c) => c.team === 'enemy' && c.alive); }
+  enemies() { return this.combatants.filter((c) => c.team === 'enemy' && c.alive && (this.duelTarget === null || c.id === this.duelTarget)); }
 
   /** Enemies within radius of a point */
   enemiesNear(p: THREE.Vector3, radius: number, team: Team = 'enemy') {
     const out: Combatant[] = [];
     for (const c of this.combatants) {
       if (c.team !== team || !c.alive) continue;
+      if (this.duelTarget !== null && c.id !== this.duelTarget) continue;
       const d = Math.hypot(c.pos.x - p.x, c.pos.z - p.z);
       if (d < radius + c.radius) out.push(c);
     }
@@ -107,6 +109,7 @@ export class Combat {
     const hits: Combatant[] = [];
     for (const c of this.combatants) {
       if (c.team !== team || !c.alive) continue;
+      if (this.duelTarget !== null && c.id !== this.duelTarget) continue;
       if (exclude && exclude.has(c.id)) continue;
       const dx = c.pos.x - center.x, dz = c.pos.z - center.z;
       const dh = Math.hypot(dx, dz);
@@ -149,7 +152,7 @@ export class Combat {
 
   /** Direct hit on a specific combatant (projectiles, AI attacks) */
   hitDirect(source: Combatant | null, target: Combatant, dir: THREE.Vector3, spec: Omit<AttackSpec, 'radius'>): boolean {
-    if (!target.alive) return false;
+    if (!target.alive || (this.duelTarget !== null && target.id !== this.duelTarget)) return false;
     const crit = Math.random() < (spec.critChance ?? 0.08);
     const damage = Math.round(spec.damage * rand(0.92, 1.08) * (crit ? (spec.critMult ?? 1.7) : 1));
     const kdir = dir.clone().setY(0);

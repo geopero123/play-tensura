@@ -478,3 +478,77 @@ html.touch-mode #ui > .rotate-hint { position: absolute; inset: 0; z-index: 60; 
 /* hidden menus must never catch taps/clicks meant for the visible one */
 .menu:not(.visible) .menu-btn, .death:not(.visible) .menu-btn { pointer-events: none; }
 #ui:has(.pause.visible) .tip, #ui:has(.panel-host.visible) .tip { opacity: 0; }
+
+/* Character builds and friend rooms */
+.attribute-panel, .room-panel { max-width: 680px; margin: auto; }
+.attribute-summary { color: var(--gold-2); margin: 4px 0 18px; font: 700 14px var(--font-head); }
+.attribute-summary > b { font-size: 30px; color: var(--cyan); margin-right: 10px; }
+.attribute-summary small, .attribute-row small { display: block; font: 500 13px/1.5 var(--font-body); color: #b9c7df; }
+.attribute-row { display: grid; grid-template-columns: 1fr 32px 46px; align-items: center; gap: 14px; border-top: 1px solid #ffffff16; padding: 10px 0; }
+.attribute-row b { font-size: 16px; }
+.attribute-row > strong { text-align: center; color: var(--gold-2); font-size: 20px; }
+.attribute-row button, .room-button { border: 1px solid #7fdfff65; background: #7fdfff12; color: #e5f8ff; border-radius: 9px; min-height: 46px; padding: 10px 16px; cursor: pointer; font-weight: 800; touch-action: manipulation; }
+.attribute-row button { font-size: 24px; padding: 0; }
+.attribute-row button:disabled, .room-button:disabled { opacity: .35; cursor: default; }
+.attribute-row button:focus-visible, .room-button:focus-visible, .room-code-input:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.derived-stats { padding: 18px 0; color: #b9c7df; line-height: 1.9; font-size: 14px; }
+.derived-stats b { color: #fff; }
+.room-panel { display: grid; gap: 12px; }
+.room-panel p { line-height: 1.6; margin: 0 0 8px; }
+.room-panel .hint-row { margin: 10px 0 0; font-size: 13px; }
+.room-code-input { padding: 14px; border: 1px solid #7fdfff60; border-radius: 8px; color: #fff; background: #070d24; font: 16px var(--font-body); min-width: 0; width: 100%; user-select: text; touch-action: manipulation; }
+.room-code { font: 800 32px var(--font-head); letter-spacing: 6px; color: var(--gold-2); text-align: center; user-select: text; -webkit-user-select: text; }
+.network-badge { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 9px 15px; border: 1px solid #c39bff60; border-radius: 30px; background: #090b20dd; color: #e5dcff; font: 800 12px var(--font-body); white-space: nowrap; opacity: 0; }
+.network-badge.visible { opacity: 1; }
+#ui:has(.menu.visible) .network-badge { opacity: 0; }
+
+/* Keep every menu reachable on short screens and respect browser chrome. */
+.menu.pause { overflow-y: auto; justify-content: safe center; padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)); }
+.pause .menu-list { flex-shrink: 0; }
+.touch-mode .panel { max-height: calc(100dvh - 24px - var(--st) - var(--sb)); overflow-y: auto; touch-action: pan-y; }
+.touch-mode .panel *, .touch-mode .pause .menu-list { touch-action: pan-y; }
+.touch-mode .room-code-input, .touch-mode .room-button, .touch-mode .attribute-row button { touch-action: manipulation; }
+.touch-mode .t-small { min-width: 44px; min-height: 44px; }
+.touch-mode .t-stats { right: calc(var(--sr) + 224px); font-size: 9px; }
+.touch-mode .skills { width: 232px; display: grid; grid-template-columns: repeat(4, 48px); gap: 8px; transform: none; right: calc(212px + var(--sr)); bottom: calc(14px + var(--sb)); }
+.touch-mode .skill { width: 48px; height: 48px; min-width: 48px; min-height: 48px; }
+.touch-mode .skill-key { display: none; }
+.touch-mode .t-attack { width: 76px; height: 76px; right: calc(18px + var(--sr)); bottom: calc(18px + var(--sb)); }
+.touch-mode .t-heavy { width: 52px; height: 52px; right: calc(108px + var(--sr)); bottom: calc(18px + var(--sb)); }
+.touch-mode .t-jump { width: 52px; height: 52px; right: calc(18px + var(--sr)); bottom: calc(108px + var(--sb)); }
+.touch-mode .t-dodge { width: 52px; height: 52px; right: calc(96px + var(--sr)); bottom: calc(86px + var(--sb)); }
+.touch-mode .t-lock { width: 46px; height: 46px; right: calc(158px + var(--sr)); bottom: calc(80px + var(--sb)); }
+.touch-mode .hud-left { transform: scale(.72); }
+.touch-mode .quest { max-width: 210px; top: calc(94px + var(--st)); }
+.touch-mode .rotate-hint.visible { display: none; }
+/* Portrait remains playable; landscape suggestion never blocks the game. */
+html.touch-mode.portrait-mode #ui > .rotate-hint.visible { display: block; inset: auto 12px auto; top: calc(70px + var(--st)); background: #090d22e8; border: 1px solid #7fdfff40; border-radius: 12px; padding: 10px; }
+.portrait-mode .rotate-hint .rotate-icon { display: none; }
+.portrait-mode .rotate-hint b { font-size: 11px; margin: 0; letter-spacing: 2px; }
+.portrait-mode .rotate-hint small { font-size: 11px; margin: 4px 0 0; }
+.portrait-mode .hud-left { transform: scale(.65); }
+.portrait-mode .t-small { top: calc(118px + var(--st)); }
+.portrait-mode .t-pause { right: calc(12px + var(--sr)); }
+.portrait-mode .t-skills { right: calc(64px + var(--sr)); }
+.portrait-mode .t-stats { right: calc(116px + var(--sr)); }
+.portrait-mode .quest { top: calc(172px + var(--st)); max-width: 190px; }
+.portrait-mode .skills { right: 12px; bottom: calc(190px + var(--sb)); grid-template-columns: repeat(4, 48px); width: 216px; }
+.portrait-mode .target, .portrait-mode .boss { top: 38%; width: 80vw; }
+.portrait-mode .prompt { bottom: 47%; }
+.portrait-mode .tip { top: 36%; max-width: 85vw; }
+.portrait-mode .network-badge { top: calc(8px + var(--st)); font-size: 10px; max-width: 95vw; overflow: hidden; }
+.portrait-mode .logo-title { font-size: clamp(38px, 11vw, 60px); }
+.portrait-mode .logo-kicker { font-size: 9px; letter-spacing: 3px; }
+@media (max-height: 430px) and (orientation: landscape) {
+  .touch-mode .quest { display: none; }
+  .touch-mode .skills { bottom: calc(8px + var(--sb)); }
+  .pause-title { font-size: 22px; margin-bottom: 4px; }
+  .pause .menu-btn { padding: 7px; min-height: 36px; }
+  .network-badge { font-size: 10px; padding: 6px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tbtn, .tstick, .touch-ui { transition: none; }
+  .rotate-icon { animation: none; }
+}
+html.touch-mode.portrait-mode #ui:has(.menu.visible) > .rotate-hint.visible { display: none; }
+.portrait-mode .panel h2 { font-size: 20px; letter-spacing: 2px; padding-right: 74px; }

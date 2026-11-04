@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Multiplayer } from '../multiplayer/Multiplayer';
 import { Settings, DEBUG, IS_TOUCH } from './Settings';
 import { Time } from './Time';
 import { Input } from './Input';
@@ -68,6 +69,7 @@ export class Game {
   prog!: Progression;
   skills!: SkillSystem;
   player!: Player;
+  multiplayer!: Multiplayer;
   hud: HUD;
   menus: Menus;
   notes: Notifications;
@@ -157,6 +159,7 @@ export class Game {
         if (this.menus.back()) return;
         if (this.state === 'playing') this.pause();
       }
+      if (e.code === 'KeyP' && this.state === 'playing' && this.menus.screen === 'none') { this.pause(); this.menus.openStats(); }
       if (e.code === 'KeyK' && this.state === 'playing' && this.menus.screen === 'none') { this.pause(); this.menus.openSkills(); }
       if (e.code === 'KeyM' && this.state === 'playing') { this.minimap.cycleZoom(); sfx('ui', 0.5); }
       if (this.state === 'title' && (e.code === 'Enter' || e.code === 'Space') && this.menus.screen === 'title') { if (!audio.ready) audio.init(); this.menus.show('none'); this.startGame(); }
@@ -209,7 +212,10 @@ export class Game {
     this.skills.onBars = (on) => this.notes.cinematicBars(on);
     this.player = new Player(this.input, this.time, this.gcam, this.terrain, this.colliders, this.combat, this.skills, this.prog, this.fx, this.particles, this.renderer.post);
     this.renderer.scene.add(this.player.root);
-    this.player.onDeath = () => this.onPlayerDeath();
+    this.multiplayer = new Multiplayer(this, this.uiRoot);
+    this.menus.getMultiplayer = () => this.multiplayer.panel();
+    this.multiplayer.onChange = () => { if (this.menus.screen === 'multiplayer') this.menus.show('multiplayer'); };
+    this.player.onDeath = () => { if (this.multiplayer.dueling) this.multiplayer.defeated(); else this.onPlayerDeath(); };
     this.player.onPerfectDodge = () => this.notes.say('PERFECT DODGE');
     this.setupNPCs();
     this.setupSpawns();
@@ -901,8 +907,11 @@ export class Game {
     }, 700);
   }
 
+  prepareDuel() { this.nearInteract = null; this.tip = null; this.dialogue.end(); }
+
   pause() {
     if (this.state !== 'playing') return;
+    this.multiplayer?.forfeit();
     this.state = 'paused';
     this.input.releaseLock();
     this.touch?.sync(false);
@@ -916,6 +925,7 @@ export class Game {
     audio.duckMusic(1, 0.4);
   }
   toTitle() {
+    this.multiplayer?.leave();
     this.state = 'title';
     this.touch?.sync(false);
     this.gcam.mode = 'title';
@@ -986,6 +996,8 @@ export class Game {
     this.fpsAcc += rawDt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
     audio.update(rawDt);
+    this.multiplayer?.update(rawDt);
+    this.touch?.poll();
     this.notes.update(this.state === 'paused' ? 0 : rawDt);
 
     if (this.state === 'title') {
@@ -1006,7 +1018,7 @@ export class Game {
     const playing = this.state === 'playing' || this.state === 'dead' || this.state === 'cinematic';
     if (!playing) { this.finishFrame(dt); return; }
     this.playT += rawDt;
-    this.tickTimers(rawDt);
+    if (!this.multiplayer.dueling) this.tickTimers(rawDt);
 
     // dialogue advance (a press that closes the dialogue must not also trigger a new interaction this frame)
     const dialogueWasActive = this.dialogue.active;
@@ -1014,7 +1026,7 @@ export class Game {
       if (this.input.justPressed('KeyF') || this.input.justPressed('Space') || this.input.justPressed('Enter') || this.input.mouseJustPressed(0)) this.dialogue.advance();
       this.dialogue.update(rawDt);
     }
-    const allowInput = this.state === 'playing' && !this.dialogue.active && !dialogueWasActive;
+    const allowInput = this.state === 'playing' && !this.dialogue.active && !dialogueWasActive && (!this.multiplayer.dueling || this.multiplayer.fighting);
     if (this.state === 'playing') this.gcam.handleInput(this.input, rawDt);
 
     // player (uses last frame's interaction prompt so F talks/uses instead of casting Predator)
@@ -1022,6 +1034,14 @@ export class Game {
     this.player.interactNearby = !!this.nearInteract;
     this.player.update(dt, allowInput);
     this.prof('player');
+    if (this.multiplayer.dueling) {
+      this.player.inCombat = true;
+      this.updateWorld(dt, this.player.pos);
+      this.gcam.update(rawDt, this.player.pos, this.player.yaw, { sprint: this.player.sprinting, inCombat: true, velocity: this.player.vel });
+      this.updateHud(dt, true);
+      this.finishFrame(dt);
+      return;
+    }
     if (this.state === 'cinematic' && this.cineFn) { this.cineT += rawDt; if (!this.cineFn(this.cineT, rawDt)) this.cineFn = null; }
 
     // enemies
@@ -1229,6 +1249,8 @@ export class Game {
     const p = this.player.pos;
     const blips = this.minimapBlips;
     blips.length = 0;
+    const friend = this.multiplayer?.friendPosition;
+    if (friend) blips.push({ x: friend.x, z: friend.z, kind: 'friend', label: 'Friend' });
     for (const e of this.enemies) {
       if (!e.alive || e.kind === 'dummy') continue;
       if (Math.hypot(e.pos.x - p.x, e.pos.z - p.z) > 130) continue;
@@ -1240,7 +1262,7 @@ export class Game {
     const obj = this.objectivePos();
     const fwd = this.gcam.getForward(this.tmp);
     this.minimap.setVisible(this.state === 'playing' || this.state === 'cinematic' || this.state === 'dead');
-    this.touch?.sync(this.state === 'playing' && this.menus.screen === 'none' && !this.dialogue.active);
+    this.touch?.sync(this.state === 'playing' && this.menus.screen === 'none' && !this.dialogue.active && (!this.multiplayer.dueling || this.multiplayer.fighting));
     this.minimap.update({ x: p.x, z: p.z, playerYaw: this.player.yaw, camFx: fwd.x, camFz: fwd.z, blips, objective: obj ? { x: obj.x, z: obj.z } : null, zone: this.zoneCurrent || 'GREAT JURA FOREST' }, dt);
   }
 
