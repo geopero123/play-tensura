@@ -42,10 +42,15 @@ export class Menus {
     this.title = h('menu title-screen');
     this.title.innerHTML = `<div class="title-bg"></div><div class="title-vignette"></div>
       <div class="logo"><div class="logo-kicker">A TENSURA-INSPIRED ACTION RPG</div><div class="logo-title">TEMPEST<br>REBIRTH</div><div class="logo-orn"></div><div class="logo-sub">FROM SLIME TO SOVEREIGN</div></div>
-      <div class="menu-list"><button class="menu-btn" data-a="play">PLAY</button><button class="menu-btn" data-a="characters">CHARACTERS</button><button class="menu-btn" data-a="settings">SETTINGS</button></div>
+      <div class="menu-list"><button class="menu-btn" data-a="play">PLAY</button><button class="menu-btn" data-a="multiplayer">ACCOUNT · SAVE PROGRESS</button><button class="menu-btn" data-a="characters">CHARACTERS</button><button class="menu-btn" data-a="settings">SETTINGS</button></div>
       <div class="menu-hint"><span><span class="key">W A S D</span> MOVE</span><span><span class="key">MOUSE</span> LOOK / ATTACK</span><span><span class="key">SHIFT</span> DODGE</span><span><span class="key">Q E R C F X</span> MAGIC</span></div>
       <div class="version">VERTICAL SLICE · v0.1</div>`;
     root.appendChild(this.title);
+    if (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+      const hint=document.createElement('p');hint.className='ios-fullscreen-hint';
+      hint.textContent='For fullscreen on iPhone: Safari → Share → Add to Home Screen → Open as Web App. Play from the new icon.';
+      this.title.appendChild(hint);
+    }
     this.title.querySelectorAll('.menu-btn').forEach((b) => {
       b.addEventListener('mouseenter', () => sfx('uiHover'));
       b.addEventListener('click', () => { sfx('uiConfirm'); this.action((b as HTMLElement).dataset.a!); });
@@ -56,7 +61,7 @@ export class Menus {
     // pause
     this.pause = h('menu pause');
     this.pause.innerHTML = `<div class="title-bg"></div><div class="pause-title">PAUSED</div>
-      <div class="menu-list"><button class="menu-btn" data-a="resume">RESUME</button><button class="menu-btn" data-a="stats">STATS</button><button class="menu-btn" data-a="multiplayer">MULTIPLAYER · 1v1</button><button class="menu-btn" data-a="skills">SKILLS</button><button class="menu-btn" data-a="settings">SETTINGS</button><button class="menu-btn danger" data-a="quit">TITLE SCREEN</button></div>
+      <div class="menu-list"><button class="menu-btn" data-a="resume">RESUME</button><button class="menu-btn" data-a="stats">STATS</button><button class="menu-btn" data-a="multiplayer">CAMP · SHOP · PLAYERS</button><button class="menu-btn" data-a="skills">SKILLS</button><button class="menu-btn" data-a="settings">SETTINGS</button><button class="menu-btn danger" data-a="quit">TITLE SCREEN</button></div>
       <div class="panel glass" style="width:min(720px,80vw);margin-top:26px;padding:18px 26px;"><div class="controls">
         <div><span>Move</span><b>W A S D</b></div><div><span>Camera</span><b>MOUSE</b></div>
         <div><span>Attack combo</span><b>LEFT CLICK</b></div><div><span>Heavy / launcher</span><b>RIGHT CLICK</b></div>
@@ -98,7 +103,7 @@ export class Menus {
       case 'characters': this.from = 'title'; this.show('characters'); break;
       case 'settings': this.from = this.screen === 'pause' ? 'pause' : 'title'; this.show('settings'); break;
       case 'stats': this.from = 'pause'; this.show('stats'); break;
-      case 'multiplayer': this.from = 'pause'; this.show('multiplayer'); break;
+      case 'multiplayer': this.from = this.screen === 'title' ? 'title' : 'pause'; this.show('multiplayer'); break;
       case 'skills': this.from = 'pause'; this.show('skills'); break;
       case 'resume': this.show('none'); this.onResume(); break;
       case 'quit': this.show('title'); this.onQuit(); break;
@@ -117,7 +122,7 @@ export class Menus {
     if (s === 'settings') this.panelHost.appendChild(this.buildSettings());
     if (s === 'characters') this.panelHost.appendChild(this.buildCharacters());
     if (s === 'stats') this.panelHost.appendChild(this.buildStats());
-    if (s === 'multiplayer') this.panelHost.appendChild(this.panel('MULTIPLAYER', 'PUBLIC WORLD · FRIENDLY DUELS', this.getMultiplayer()));
+    if (s === 'multiplayer') this.panelHost.appendChild(this.panel('CAMP', 'ACCOUNT · FORGE · DUNGEON · PLAYERS', this.getMultiplayer()));
     if (s === 'skills') this.panelHost.appendChild(this.buildSkills());
   }
 

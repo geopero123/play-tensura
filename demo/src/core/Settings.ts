@@ -30,7 +30,7 @@ export interface GraphicsPreset {
 const dpr = () => (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
 export const PRESETS: Record<Quality, GraphicsPreset> = {
-  low: { pixelRatio: IS_TOUCH ? Math.min(1, dpr()) : 0.75, shadowSize: 1024, grassCount: 12000, particleCap: 1500, bloom: false, postFX: true, drawDistance: 180, waterReflections: false, treeDetail: 0.6 },
+  low: { pixelRatio: IS_TOUCH ? Math.min(1, dpr()) : 0.75, shadowSize: 512, grassCount: 8000, particleCap: 1500, bloom: false, postFX: true, drawDistance: 180, waterReflections: false, treeDetail: 0.6 },
   medium: { pixelRatio: 1.0, shadowSize: 2048, grassCount: 28000, particleCap: 3000, bloom: true, postFX: true, drawDistance: 240, waterReflections: false, treeDetail: 0.8 },
   high: { pixelRatio: Math.min(1.5, dpr()), shadowSize: 2048, grassCount: 50000, particleCap: 5000, bloom: true, postFX: true, drawDistance: 320, waterReflections: true, treeDetail: 1 },
   ultra: { pixelRatio: Math.min(2, dpr()), shadowSize: 4096, grassCount: 90000, particleCap: 8000, bloom: true, postFX: true, drawDistance: 420, waterReflections: true, treeDetail: 1 },

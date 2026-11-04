@@ -1,3 +1,4 @@
+import { dress } from '../entities/Appearance';
 import * as THREE from 'three';
 import type { Game } from '../core/Game';
 import { type Combatant, type HitInfo, newId } from '../combat/Combat';
@@ -135,6 +136,7 @@ export class DuelSession {
     switch (p.t) {
       case 'state': {
         if (!vector(p.pos) || !finite(p.yaw, -1000, 1000) || !finite(p.hp, 0, 1000000) || !finite(p.maxHp, 1, 1000000)) return;
+        dress(this.model,p.skin,p.accessory);
         this.target.fromArray(p.pos); this.targetYaw = p.yaw;
         this.rival.hp = p.hp; this.rival.maxHp = p.maxHp; this.rival.alive = p.hp > 0;
         const wasReady = this.remoteReady, first = !this.hasSnapshot;

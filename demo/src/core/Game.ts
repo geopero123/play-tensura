@@ -1,3 +1,6 @@
+import { dress, SKIN_COLORS, ACCESSORIES } from '../entities/Appearance';
+import { Account } from '../accounts/Account';
+import { enterGameFullscreen } from './Fullscreen';
 import { vocations } from '../progression/DungeonBuild';
 import * as THREE from 'three';
 import { Multiplayer } from '../multiplayer/Multiplayer';
@@ -127,6 +130,8 @@ export class Game {
   private guide = document.createElement('div');
   private guideArrow = document.createElement('span');
   private guideText = document.createElement('span');
+  account!: Account;
+  private saveTimer = 0;
   private uiRoot: HTMLElement;
   private fpsAcc = 0; private fpsN = 0; fps = 60;
   /** debug profiler: accumulated ms per section (reset by reading) */
@@ -138,6 +143,9 @@ export class Game {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.uiRoot = uiRoot;
+    const full = () => { if(this.state==='playing') enterGameFullscreen(); };
+    canvas.addEventListener('pointerdown', full, {passive:true});
+    uiRoot.addEventListener('pointerdown', full, {passive:true});
     this.guide.className = 'first-quest-guide';
     this.guideArrow.textContent = '➤';
     this.guide.append(this.guideArrow, this.guideText);
@@ -226,12 +234,34 @@ export class Game {
     this.player = new Player(this.input, this.time, this.gcam, this.terrain, this.colliders, this.combat, this.skills, this.prog, this.fx, this.particles, this.renderer.post);
     this.renderer.scene.add(this.player.root);
     this.multiplayer = new Multiplayer(this, this.uiRoot);
+    this.account = new Account(() => this.captureSave(), value => this.restoreSave(value));
+    this.account.onChange = () => { if (this.menus.screen === 'multiplayer') this.menus.show('multiplayer'); };
+    void this.account.init();
+    window.addEventListener('pagehide',()=>{if(this.state!=='loading'&&!this.multiplayer.dueling)void this.account.save();});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden&&this.state==='playing'&&!this.multiplayer.dueling)void this.account.save();});
     this.menus.getMultiplayer = () => {
       const panel = this.multiplayer.panel();
+      const wardrobe = document.createElement('div'); wardrobe.className='wardrobe-panel';
+      const heading=document.createElement('h3');heading.textContent='Your appearance';wardrobe.appendChild(heading);
+      for(const [field,names] of [['skin',['Azure','Lilac','Rose','Mint','Amber']],['accessory',ACCESSORIES]] as const){
+        const label=document.createElement('label');label.textContent=field==='skin'?'Slime color':'Accessory';
+        const select=document.createElement('select');select.ariaLabel=label.textContent;
+        names.forEach((name,index)=>select.add(new Option(name,String(index),false,this.prog.build[field]===index)));
+        select.onchange=()=>{this.prog.build[field]=select.selectedIndex;dress(this.player.model,this.prog.build.skin,this.prog.build.accessory);void this.account.save();};
+        label.appendChild(select);wardrobe.appendChild(label);
+      }
+      panel.appendChild(wardrobe);
+      const help=document.createElement('p');help.className='hint-row';
+      help.textContent='Play: follow the gold arrow, approach the objective, then press F or tap Interact. Spend level-up points in Stats. Dungeon waves earn marks. The forge sells permanent weapon and armor upgrades.';
+      panel.appendChild(help);
+      const ios=document.createElement('p');ios.className='hint-row';
+      ios.textContent='iPhone fullscreen: Safari → Share → Add to Home Screen → Open as Web App. Launch the new icon for edge-to-edge play. Fullscreen is requested automatically when supported.';
+      panel.appendChild(ios);
+      panel.prepend(this.account.panel(this.state === 'title'));
       const button = document.createElement('button');
       button.className = 'room-button';
       button.textContent = this.dungeon ? 'Dungeon · wave ' + this.trialWave + '/30' : 'ENTER TEMPEST DEPTHS · 30 WAVES';
-      button.disabled = this.trialActive || this.multiplayer.dueling || !!this.boss;
+      button.disabled = this.state === 'title' || this.trialActive || this.multiplayer.dueling || !!this.boss;
       button.onclick = () => {
         if (this.trialActive || this.multiplayer.dueling || this.boss) return;
         this.menus.show('none'); this.resume();
@@ -944,7 +974,35 @@ export class Game {
   }
 
   // ------------------------------------------------------------ flow
+  private captureSave() {
+    const p = this.prog;
+    const story = {questStep:this.questStep,questProgress:this.questProgress,questDone:this.questDone,sunQuestStep:this.sunQuestStep,sunProgress:this.sunProgress,sunDone:this.sunDone,relicRead:this.relicRead,bossDefeated:this.bossDefeated,introShown:this.introShown};
+    return {version:1,level:p.level,xp:p.xp,attributes:p.attributes,skills:[...p.skills],traits:[...p.traits],traitStacks:[...p.traitStacks],absorbed:[...p.absorbed],kills:p.kills,build:p.build,story};
+  }
+  private restoreSave(value: unknown) {
+    if (!value || typeof value !== 'object' || (value as any).version !== 1) return;
+    const v=value as any,p=this.prog;
+    const number=(n:unknown,max:number)=>typeof n==='number'&&Number.isFinite(n)?Math.max(0,Math.min(max,Math.floor(n))):0;
+    p.level=Math.max(1,number(v.level,10000));p.xp=number(v.xp,1e9);p.kills=number(v.kills,1e9);
+    for(const key of Object.keys(p.attributes) as (keyof typeof p.attributes)[]) p.attributes[key]=number(v.attributes?.[key],30000);
+    if(p.statPoints===0 && Object.values(p.attributes).reduce((a,b)=>a+b,0)>5+(p.level-1)*3)p.resetAttributes();
+    p.skills.clear();p.acquireSkill('predator',true);
+    if(Array.isArray(v.skills))for(const entry of v.skills){if(!Array.isArray(entry)||!SKILLS[entry[0] as SkillId])continue;const id=entry[0] as SkillId;p.acquireSkill(id,true);const state=p.skills.get(id)!;state.level=Math.max(1,Math.min(SKILLS[id].tiers.length,number(entry[1]?.level,5)));state.xp=number(entry[1]?.xp,1e8);}
+    p.traits.clear();if(Array.isArray(v.traits))for(const id of v.traits)if(Object.hasOwn(TRAITS,id))p.traits.add(id);
+    if(v.build){p.build.skin=number(v.build.skin,SKIN_COLORS.length-1);p.build.accessory=number(v.build.accessory,ACCESSORIES.length-1);p.build.coins=number(v.build.coins,1e9);p.build.bestWave=number(v.build.bestWave,30);p.build.weapon=number(v.build.weapon,10000);p.build.armor=number(v.build.armor,10000);if(vocations.includes(v.build.vocation))p.build.vocation=v.build.vocation;}
+    for(const key of ['questStep','questProgress','sunQuestStep','sunProgress'] as const)if(typeof v.story?.[key]==='number')this[key]=Math.max(-1,Math.min(1000,Math.floor(v.story[key])));
+    for(const key of ['questDone','sunDone','relicRead','bossDefeated','introShown'] as const)if(typeof v.story?.[key]==='boolean')this[key]=v.story[key];
+    for(const [field,max] of [['traitStacks',10000],['absorbed',1e9]] as const) {
+      p[field].clear();
+      if(Array.isArray(v[field])) for(const pair of v[field]) if(Array.isArray(pair)&&typeof pair[0]==='string'&&pair[0].length<80) (p[field] as Map<string,number>).set(pair[0],number(pair[1],max));
+    }
+    dress(this.player.model,p.build.skin,p.build.accessory);
+    p.hp=p.maxHp;p.mp=p.maxMp;
+  }
+
   startGame() {
+    if (!this.account.ready) { this.menus.show('title'); this.notes.say('Loading your save. Open Account to check save status.'); return; }
+    enterGameFullscreen();
     this.touch?.enterFullscreen();
     if (!audio.ready) audio.init();
     audio.resume();
@@ -952,6 +1010,7 @@ export class Game {
     this.timers.length = 0;
     setTimeout(() => {
       this.player.spawn(new THREE.Vector3(0, 0, 4));
+      dress(this.player.model,this.prog.build.skin,this.prog.build.accessory);
       this.player.yaw = Math.PI; this.player.facing.set(0, 0, -1);
       this.gcam.yaw = 0; this.gcam.pitch = 0.3; this.gcam.mode = 'explore';
       this.checkpoint.set(0, 0, 4);
@@ -988,12 +1047,14 @@ export class Game {
     audio.duckMusic(0.35, 0.3);
   }
   resume() {
+    enterGameFullscreen();
     if (this.state !== 'paused') return;
     this.state = 'playing';
     this.input.requestLock();
     audio.duckMusic(1, 0.4);
   }
   toTitle() {
+    if (!this.multiplayer.dueling) void this.account.save();
     this.cancelDungeon();
     this.multiplayer?.leave();
     this.state = 'title';
@@ -1078,6 +1139,8 @@ export class Game {
     if (this.fpsAcc > 0.5) { this.fps = this.fpsN / this.fpsAcc; this.fpsAcc = 0; this.fpsN = 0; }
     audio.update(rawDt);
     this.multiplayer?.update(rawDt);
+    this.saveTimer += rawDt;
+    if (this.saveTimer > 20 && this.state === 'playing' && !this.multiplayer.dueling) { this.saveTimer=0; void this.account.save(); }
     this.touch?.poll();
     this.notes.update(this.state === 'paused' ? 0 : rawDt);
 
@@ -1306,7 +1369,12 @@ export class Game {
   private objectivePos(): THREE.Vector3 | null {
     if (this.questStep >= 0 && !this.questDone) {
       switch (this.questStep) {
-        case 1: case 2: return LANDMARKS.wolfWoods;
+        case 1: return LANDMARKS.wolfWoods;
+        case 2: {
+          const wolves=this.enemies.filter(e=>e.alive&&e.kind==='stormWolf');
+          wolves.sort((a,b)=>a.pos.distanceToSquared(this.player.pos)-b.pos.distanceToSquared(this.player.pos));
+          return wolves[0]?.pos ?? LANDMARKS.wolfWoods;
+        }
         case 3: case 4: return LANDMARKS.arena;
         case 5: return this.mira.pos;
       }
@@ -1315,13 +1383,18 @@ export class Game {
       switch (this.sunQuestStep) {
         case 0: return this.elder.pos;
         case 1: return LANDMARKS.ruins;
-        case 2: return null; // wisps: shown as enemy blips
+        case 2: {
+          const wisps=this.enemies.filter(e=>e.alive&&e.kind==='wisp');
+          wisps.sort((a,b)=>a.pos.distanceToSquared(this.player.pos)-b.pos.distanceToSquared(this.player.pos));
+          return wisps[0]?.pos ?? LANDMARKS.cave;
+        }
         case 3: return LANDMARKS.hidden;
         case 4: return LANDMARKS.arena;
         case 5: return this.elder.pos;
       }
     }
     if (this.questStep < 0) return this.mira.pos;
+    if(this.questDone&&!this.sunDone)return this.elder.pos;
     return null;
   }
 
@@ -1344,13 +1417,15 @@ export class Game {
     const fwd = this.gcam.getForward(this.tmp);
     this.minimap.setVisible(this.state === 'playing' || this.state === 'cinematic' || this.state === 'dead');
     this.touch?.sync(this.state === 'playing' && this.menus.screen === 'none' && !this.dialogue.active && (!this.multiplayer.dueling || this.multiplayer.fighting));
-    this.guide.hidden = this.state !== 'playing' || this.questStep >= 0 || this.dialogue.active || this.dungeon || this.multiplayer.dueling;
+    this.guide.hidden = this.state !== 'playing' || !this.objectivePos() || this.dialogue.active || this.dungeon || this.multiplayer.dueling;
     if (!this.guide.hidden) {
-      const dx = this.mira.pos.x - p.x, dz = this.mira.pos.z - p.z;
+      const destination = this.objectivePos()!;
+      const dx = destination.x - p.x, dz = destination.z - p.z;
       const distance = Math.hypot(dx, dz);
       const angle = Math.atan2(-(dx*fwd.x + dz*fwd.z), -dx*fwd.z + dz*fwd.x);
       this.guideArrow.style.transform = 'rotate(' + angle + 'rad)';
-      this.guideText.textContent = distance < 3 ? 'Talk to Mira to begin' : 'Find Mira · ' + Math.round(distance) + 'm';
+      const task = this.questDone ? 'The Sun quest · follow your quest journal' : this.questStep < 0 ? 'Talk to Mira' : this.questStep <= 2 ? 'Investigate Wolf Territory' : this.questStep <= 4 && !this.questDone ? 'Enter the storm crater' : !this.questDone ? 'Return to Mira' : 'Follow the Sun quest';
+      this.guideText.textContent = task + ' · ' + Math.round(distance) + 'm' + (distance < 4 && (this.questStep < 0 || this.questStep === 5) ? ' · F / Interact' : '');
     }
     this.minimap.update({ x: p.x, z: p.z, playerYaw: this.player.yaw, camFx: fwd.x, camFz: fwd.z, blips, objective: obj ? { x: obj.x, z: obj.z } : null, zone: this.zoneCurrent || 'GREAT JURA FOREST' }, dt);
   }

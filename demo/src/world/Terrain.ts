@@ -232,7 +232,15 @@ export class Terrain {
 
   /** Walking/camera support includes the bridge; terrain/water rendering keeps its riverbed. */
   walkableHeightAt(x: number, z: number) {
-    return Math.max(this.heightAt(x, z), this.bridge?.heightAt(x, z) ?? -Infinity);
+    const r = LANDMARKS.ruins;
+    const d = Math.hypot(x-r.x, z-r.z);
+    const altar = Math.abs(x-r.x) <= 1.2 && Math.abs(z-r.z) <= 1.2;
+    const sector = Math.PI / 5;
+    const angle = ((Math.atan2(x-r.x,z-r.z) % sector) + sector) % sector - sector / 2;
+    const outline = Math.cos(Math.PI / 10) / Math.cos(angle);
+    const base = this.heightAt(r.x,r.z);
+    const ruinsTop = altar ? base+2.4 : d < 14*outline ? base+1 : d < 16*outline ? base+.2 : -Infinity;
+    return Math.max(this.heightAt(x, z), this.bridge?.heightAt(x, z) ?? -Infinity, ruinsTop);
   }
 
   walkableNormalAt(x: number, z: number, out = new THREE.Vector3()) {

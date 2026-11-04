@@ -106,7 +106,7 @@ export class Multiplayer {
     const g=this.game;
     if (!this.online) return;
     this.link.send({ t:'state',pos:g.player.pos.toArray(),yaw:g.player.yaw,hp:Math.max(0,g.prog.hp),maxHp:g.prog.maxHp,
-      ready:g.player.alive && ['playing','paused'].includes(g.state) && !g.dialogue.active,
+      skin:g.prog.build.skin,accessory:g.prog.build.accessory,ready:g.player.alive && ['playing','paused'].includes(g.state) && !g.dialogue.active,
       attacking:['attack','heavy','cast'].includes(g.player.state) });
   }
   update(dt: number) {

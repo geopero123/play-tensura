@@ -1,3 +1,4 @@
+import { enterGameFullscreen } from '../core/Fullscreen';
 import { Input } from '../core/Input';
 import { audio } from '../audio/Audio';
 import { SKILLS, SKILL_ORDER } from '../progression/Data';
@@ -240,14 +241,7 @@ export class TouchControls {
   }
 
   /** go fullscreen + landscape where the browser allows it (Android Chrome; iOS ignores) */
-  enterFullscreen() {
-    const el = document.documentElement as any;
-    try {
-      if (document.fullscreenElement || !el.requestFullscreen) return;
-      const p = el.requestFullscreen({ navigationUI: 'hide' });
-      if (p && p.then) p.then(() => (screen.orientation as any)?.lock?.('landscape').catch(() => {})).catch(() => {});
-    } catch {}
-  }
+  enterFullscreen() { enterGameFullscreen(); }
 
   /** scale the skill bar so it fits between the joystick area and the action cluster */
   private layout() {

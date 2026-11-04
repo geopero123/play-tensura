@@ -556,3 +556,9 @@ html.touch-mode.portrait-mode #ui:has(.menu.visible) > .rotate-hint.visible { di
 .first-quest-guide { position:absolute; top: max(46px, calc(env(safe-area-inset-top) + 36px)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:8px; pointer-events:none; border-radius:16px; padding:5px 10px; background:#101824da; color:#fff1c2; font:700 12px sans-serif; white-space:nowrap }
 .first-quest-guide[hidden], #ui:has(.menu.visible) .first-quest-guide { display:none }
 .first-quest-guide span:first-child { display:inline-block; color:#ffd575 }
+
+.account-panel,.wardrobe-panel{border:1px solid #9eb6d43b;border-radius:12px;padding:12px;margin:8px 0}
+.account-panel input,.wardrobe-panel select{font:inherit;color:#eef4ff;background:#141c30;border:1px solid #8ca1c366;border-radius:8px;padding:10px;margin:5px 0;box-sizing:border-box;width:100%;min-height:44px}
+.account-panel button{margin:4px}.wardrobe-panel label{display:block;margin:6px 0}
+
+.ios-fullscreen-hint{max-width:340px;text-align:center;padding:8px 15px;color:#d5dff0;font:600 12px/1.5 sans-serif}

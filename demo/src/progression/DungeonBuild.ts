@@ -3,6 +3,8 @@ export type Vocation = typeof vocations[number];
 
 export class DungeonBuild {
   vocation: Vocation = 'Guardian';
+  skin = 0;
+  accessory = 0;
   coins = 0;
   bestWave = 0;
   weapon = 0;

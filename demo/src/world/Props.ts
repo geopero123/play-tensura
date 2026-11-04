@@ -335,7 +335,7 @@ export class Props {
     const altar = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.4, 2.4), stone);
     altar.position.set(r.x, this.h(r.x, r.z) + 1.7, r.z); altar.castShadow = true;
     this.group.add(altar);
-    this.colliders.add({ x: r.x, z: r.z, r: 1.7, tag: 'altar' });
+    this.colliders.add({ x: r.x, z: r.z, r: 1.2, h: this.h(r.x,r.z)+2.4, tag: 'altar' });
     const relic = new THREE.Mesh(new THREE.OctahedronGeometry(0.5), new THREE.MeshBasicMaterial({ color: 0xa0ffe0, toneMapped: false }));
     relic.position.set(r.x, this.h(r.x, r.z) + 3.2, r.z);
     relic.name = 'relic';

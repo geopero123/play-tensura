@@ -34,5 +34,13 @@ try {
  for(let i=0;i<90&&!falling.grounded;i++)falling.applyPhysics(1/60,0);
  assert(falling.grounded);assert(Math.abs(falling.pos.y-bridge.localHeight(0))<.02);
  for(const sign of [-1,1]){const p=bridge.worldPoint(0,sign*1.65);const pos=new THREE.Vector3(p.x,bridge.localHeight(0),p.z);colliders.resolve(pos,.45,pos.y+.5);assert(Math.abs(bridge.localPoint(pos.x,pos.z).v)<1.4,'rail should stop walking off the side');}
+ const ruins={x:108,z:-42};
+ for(const [x,z,height] of [[ruins.x+5,ruins.z,1],[ruins.x,ruins.z,2.4]]){
+   const player=body(0);player.pos.set(x,terrain.heightAt(ruins.x,ruins.z)+8,z);
+   player.vel.set(0,-3,0);player.grounded=false;
+   for(let i=0;i<180&&!player.grounded;i++)player.applyPhysics(1/60,0);
+   assert(player.grounded);assert(Math.abs(player.pos.y-terrain.heightAt(ruins.x,ruins.z)-height)<.02,'ruins surface should support player');
+ }
+ console.log('PASS: ruins platform and altar jump landing');
  console.log('PASS: bridge/path alignment, connected bank ramps, separate riverbed, walkable slopes, crossing both ways with real player physics, jump landing, rail collision');
 }finally{await rm(temp,{recursive:true,force:true});}
