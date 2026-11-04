@@ -81,6 +81,8 @@ export class Account {
     const button=(text:string,fn:()=>void,disabled=false)=>{const b=document.createElement('button');b.className='room-button';b.textContent=text;b.disabled=disabled||this.busy;b.onclick=fn;root.appendChild(b);};
     let recovery: string | null=null;try{recovery=localStorage.getItem(this.key+'-recovery');}catch{}
     if(recovery) button('RESTORE DEVICE BACKUP',()=>{try{this.restore(JSON.parse(recovery!));this.status='Device backup restored. Save now to use it in the cloud.';this.onChange();}catch{}},!allowLoad||!this.ready);
+    let guest: string | null=null;try{guest=localStorage.getItem('tempest-save-v1-guest');}catch{}
+    if(this.userId && guest) button('IMPORT DEVICE GUEST PROGRESS',()=>{try{this.restore(JSON.parse(guest!));this.status='Guest progress imported. Save now to keep it in your account.';this.onChange();}catch{}},!allowLoad||!this.ready);
     if(this.userId){button('SAVE NOW',()=>void this.save());button('RELOAD CLOUD SAVE',()=>void this.load(),!allowLoad);button('SIGN OUT',()=>void this.logout(),!allowLoad);}
     else {
       const email=document.createElement('input');email.type='email';email.placeholder='Email';email.autocomplete='email';email.ariaLabel='Account email';
