@@ -341,7 +341,7 @@ button { font-family: inherit; }
 }
 
 /* ---------- minimap ---------- */
-.minimap { position: absolute; right: 28px; bottom: 28px; width: 176px; height: 176px; opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
+.minimap { pointer-events: auto; cursor: pointer; position: absolute; right: 28px; bottom: 28px; width: 176px; height: 176px; opacity: 0; transform: translateY(12px); transition: opacity .6s ease, transform .6s ease; }
 .hud.visible .minimap.visible { opacity: 1; transform: none; }
 .minimap-canvas { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 8px 30px rgba(0,0,0,.6), inset 0 0 30px rgba(0,0,0,.6); }
 .minimap-ring { position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--line); box-shadow: 0 0 14px rgba(240,201,106,.25), inset 0 0 0 1px rgba(255,255,255,.08); pointer-events: none; }

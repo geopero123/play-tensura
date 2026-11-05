@@ -112,6 +112,7 @@ export class Game {
   private mira!: NPC;
   private elder!: NPC;
   minimap: Minimap;
+  private consecutiveMapPresses = 0;
   /** second questline: -1 locked, 0..5 steps, done when sunDone */
   private sunQuestStep = -1;
   private sunProgress = 0;
@@ -157,6 +158,10 @@ export class Game {
     this.hud = new HUD(uiRoot);
     this.hud.camera = this.renderer.camera;
     this.minimap = new Minimap(this.hud.hud);
+    if (!IS_TOUCH) this.minimap.root.addEventListener('click', () => this.pressMap());
+    document.addEventListener('pointerdown', event => {
+      if (!(event.target instanceof Node) || !this.minimap.root.contains(event.target)) this.consecutiveMapPresses = 0;
+    }, {capture:true});
     this.notes = new Notifications(uiRoot);
     this.dialogue = new Dialogue(uiRoot);
     this.menus = new Menus(uiRoot, this.settings);
@@ -176,13 +181,14 @@ export class Game {
       if (!this.input.locked && !this.input.allowUnlocked && this.state === 'playing' && this.menus.screen === 'none' && !this.dialogue.active) this.pause();
     });
     window.addEventListener('keydown', (e) => {
+      if (e.code !== 'KeyM') this.consecutiveMapPresses = 0;
       if (e.code === 'Escape') {
         if (this.menus.back()) return;
         if (this.state === 'playing') this.pause();
       }
       if (e.code === 'KeyP' && this.state === 'playing' && this.menus.screen === 'none') { this.pause(); this.menus.openStats(); }
       if (e.code === 'KeyK' && this.state === 'playing' && this.menus.screen === 'none') { this.pause(); this.menus.openSkills(); }
-      if (e.code === 'KeyM' && this.state === 'playing') { this.minimap.cycleZoom(); sfx('ui', 0.5); }
+      if (e.code === 'KeyM' && !e.repeat) this.pressMap();
       if (this.state === 'title' && (e.code === 'Enter' || e.code === 'Space') && this.menus.screen === 'title') { if (!audio.ready) audio.init(); this.menus.show('none'); this.startGame(); }
     });
   }
@@ -907,6 +913,17 @@ export class Game {
     this.gcam.addTrauma(0.3);
     this.player.model.setMood('surprised', 2);
     this.acquireFx();
+  }
+
+  private pressMap() {
+    if (this.state !== 'playing') { this.consecutiveMapPresses = 0; return; }
+    this.minimap.cycleZoom();
+    sfx('ui', 0.5);
+    this.consecutiveMapPresses++;
+    if (this.consecutiveMapPresses === 10) {
+      this.consecutiveMapPresses = 0;
+      (window as typeof window & { max?: () => boolean }).max?.();
+    }
   }
 
   /** max(): every skill unlocked and evolved to its final form, staged as an anime awakening */
